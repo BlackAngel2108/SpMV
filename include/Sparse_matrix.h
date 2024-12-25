@@ -1,88 +1,94 @@
 #pragma once
 #include <iostream>
 #include <vector>
-class Sparse_matrix
-{
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <fstream>
+#include <map>
+#include <algorithm>
+#include <omp.h>
+
+class Sparse_matrix {
 protected:
-    int n,m;
-    //std::vector<std::vector<double>> data;
+    int rows, cols;
+    size_t size;
+
 public:
-    virtual std::vector<double> SpMV(std::vector<double>&){}
+    virtual std::vector<double> SpMV(std::vector<double>& vec) = 0;
+    int get_cols() { return cols; }
+    int get_size() { return size; }
+    int get_rows() { return rows; }
 };
 
-class CSR_matrix : public Sparse_matrix
-{
-private:
-    std::vector<double> data; //no zero elements
-    std::vector<int> indices; //colums
-    std::vector<int> indptr; //index of element in data in i line
-public:
-    CSR_matrix(std::vector<double> data_, std::vector<int> indices_, std::vector<int> indptr_):
-        data(data_), indices(indices_), indptr(indptr_){}
-    std::vector<double> SpMV(std::vector<double>&) override;
-    std::vector<double> SELLPACK(std::vector<double>);
-    std::vector<double> Sell_c_sigma(std::vector<double>);
-    std::vector<double> Sell_c_R(std::vector<double>);
-    std::vector<double> LAV_1Seg(std::vector<double>);
-    std::vector<double> LAV(std::vector<double>);
-};
-
-class COO_matrix : public Sparse_matrix
-{
+class COO_matrix : public Sparse_matrix {
 private:
     std::vector<double> data;
-    std::vector<int> rows; 
-    std::vector<int> colums; 
+    std::vector<int> rows_id;
+    std::vector<int> colums_id;
+
 public:
-    COO_matrix(std::vector<double> data_, std::vector<int> rows_, std::vector<int> colums_) :
-        data(data_), rows(rows_), colums(colums_) {}
-    std::vector<double> SpMV(std::vector<double>&) override;
+    COO_matrix(std::string filename);
+    std::vector<double> SpMV(std::vector<double>& x) override;
+    std::vector<double> get_values() const { return data; }
+    std::vector<int> get_rows_id() const { return rows_id; }
+    std::vector<int> get_cols_id() const { return colums_id; }
 };
 
-
-class DIA_matrix : public Sparse_matrix
-{
+class CSR_matrix : public Sparse_matrix {
 private:
-    std::vector<std::vector<double>> diagonals;
-    std::vector<int> offsets;
+    std::vector<double> values;
+    std::vector<int> column_indices;
+    std::vector<int> row_pointers;
+
 public:
-    DIA_matrix(std::vector<std::vector<double>> diagonals_, std::vector<int> offsets_) :
-        diagonals(diagonals_), offsets(offsets_) {}
-    std::vector<double> SpMV(std::vector<double>&) override;
+    CSR_matrix(std::string filename);
+    std::vector<double> SpMV(std::vector<double>& vec) override;
 };
 
-class ELL_matrix : public Sparse_matrix
-{
+class DIAG_matrix : public Sparse_matrix {
 private:
-    std::vector<double> data;
-    std::vector<int> col_indices;
-    std::vector<int> row_lengths;
+    std::map<int, std::vector<std::pair<int, double>>> diagonals;
+
 public:
-    ELL_matrix(std::vector<double> data_, std::vector<int> col_indices_, std::vector<int> row_lengths_) :
-        data(data_), col_indices(col_indices_), row_lengths(row_lengths_) {}
-    std::vector<double> SpMV(std::vector<double>&) override;
+    DIAG_matrix(std::string filename);
+    std::vector<double> SpMV(std::vector<double>& vec) override;
 };
 
-class HYB_matrix : public Sparse_matrix //Hybrid
-{
+class ELLPack_matrix : public Sparse_matrix {
 private:
-    std::vector<double> data;
-    std::vector<int> indices;
-    std::vector<int> indptr;
+    std::vector<std::vector<double>> values;      // Массив значений ненулевых элементов
+    std::vector<std::vector<int>> col_indices;    // Массив индексов столбцов
+    int max_non_zero;                             // Максимальное количество ненулевых элементов в строке
+
 public:
-    HYB_matrix(std::vector<double> data_, std::vector<int> indices_, std::vector<int> indptr_) :
-        data(data_), indices(indices_), indptr(indptr_) {}
-    std::vector<double> SpMV(std::vector<double>&) override;
+    ELLPack_matrix(std::string filename);
+    std::vector<double> SpMV(std::vector<double>& x) override;
 };
 
-class HDC_matrix : public Sparse_matrix //Hybrid DIA/CSR 
-{
+class SELL_C_matrix : public Sparse_matrix {
 private:
-    std::vector<double> data;
-    std::vector<int> indices;
-    std::vector<int> indptr;
+    std::vector<std::vector<double>> values;      // Массив значений ненулевых элементов
+    std::vector<std::vector<int>> col_indices;    // Массив индексов столбцов
+    std::vector<int> row_pointers;                // Указатели начала сегменов
+    int segment_size;                             // Размер сегмента
+    int max_non_zero;                             // Максимальное количество ненулевых элементов в строке
+
 public:
-    HDC_matrix(std::vector<double> data_, std::vector<int> indices_, std::vector<int> indptr_) :
-        data(data_), indices(indices_), indptr(indptr_) {}
-    std::vector<double> SpMV(std::vector<double>&) override;
+    SELL_C_matrix(std::string filename, int segment_size);
+    std::vector<double> SpMV(std::vector<double>& x) override;
+};
+
+class SELL_C_sigma_matrix : public Sparse_matrix {
+private:
+    std::vector<std::vector<double>> values;      // Массив значений ненулевых элементов
+    std::vector<std::vector<int>> col_indices;    // Массив индексов столбцов
+    std::vector<int> row_pointers;                // Указатели начала строк
+    int segment_size;                             // Размер сегмента
+    int max_non_zero;                             // Максимальное количество ненулевых элементов в строке
+    int sigma;                                    // Количество ненулевых элементов на строку в сегменте
+
+public:
+    SELL_C_sigma_matrix(std::string filename, int segment_size, int sigma);
+    std::vector<double> SpMV(std::vector<double>& x) override;
 };
