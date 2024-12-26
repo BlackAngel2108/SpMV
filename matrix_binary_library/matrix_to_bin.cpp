@@ -116,10 +116,10 @@ int main() {
             std::string mtx_filename = entry.path().string(); // Полный путь к .mtx файлу
             std::string base_filename = entry.path().stem().string(); // Имя файла без расширения
             std::string bin_filename = bin_folder + "/" + base_filename + ".bin"; // Путь для сохранения бинарного файла
-
+            std::string bin_filename2 = bin_folder + "/" +"big" +"/"+ base_filename + ".bin";
             std::cout << "Чтение файла: " << mtx_filename << std::endl;
 
-            if (fs::exists(bin_filename)) {
+            if (fs::exists(bin_filename) || fs::exists(bin_filename2) ){
                 std::cout << "Файл " << bin_filename << " уже существует. Пропускаем создание." << std::endl;
                 continue;
             }

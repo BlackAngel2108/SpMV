@@ -55,7 +55,6 @@ CSR_matrix::CSR_matrix(std::string filename) {
         row_pointers[coo_rows[i] + 1]++;
     }
 
-    // Префиксная сумма для формирования row_pointers
     for (int i = 1; i <= rows; ++i) {
         row_pointers[i] += row_pointers[i - 1];
     }
@@ -63,7 +62,6 @@ CSR_matrix::CSR_matrix(std::string filename) {
     values.resize(size);
     column_indices.resize(size);
 
-    // Заполнение values и column_indices
     std::vector<int> currentIndex(rows, 0);
     for (size_t i = 0; i < size; ++i) {
         int row = coo_rows[i];
@@ -227,6 +225,7 @@ SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_s
 //    }
 //    return result;
 //}
+
 std::vector<double> SELL_C_matrix::SpMV(std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
 
@@ -298,12 +297,10 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
             }
         }
 
-        // Инициализация массивов values и col_indices для текущего сегмента
         values[segment].resize(segment_size * segment_max_non_zero[segment], 0.0);
         col_indices[segment].resize(segment_size * segment_max_non_zero[segment], -1);
     }
 
-    // Заполнение массивов values и col_indices с учетом сортировки
     std::vector<int> current_index(rows, 0);
     for (size_t i = 0; i < size; ++i) {
         int row = coo_rows[i];
@@ -320,7 +317,6 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
         current_index[row]++;
     }
 
-    // Инициализация row_pointers
     row_pointers.resize(num_segments + 1, 0);
     for (int i = 1; i <= num_segments; i++) {
         row_pointers[i] = row_pointers[i - 1] + segment_size * segment_max_non_zero[i - 1];
