@@ -10,7 +10,7 @@ COO_matrix::COO_matrix(std::string filename) {
     infile.read(reinterpret_cast<char*>(&rows), sizeof(rows));
     infile.read(reinterpret_cast<char*>(&cols), sizeof(cols));
     infile.read(reinterpret_cast<char*>(&size), sizeof(size));
-    std::cout<<size<<std::endl;
+    //std::cout<<size<<std::endl;
 
     rows_id.resize(size);
     colums_id.resize(size);
