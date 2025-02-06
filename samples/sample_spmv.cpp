@@ -10,10 +10,10 @@
 namespace fs = std::filesystem;
 
 double SPMV_time(std::vector<double>& ans, Sparse_matrix& matrix, std::vector<double>& vector) {
-    double startTime = clock();
+    double startTime = omp_get_wtime();
     ans = matrix.SpMV(vector);
-    double endTime = clock();
-    return (double)(endTime - startTime) / CLOCKS_PER_SEC;
+    double endTime = omp_get_wtime();
+    return (double)(endTime - startTime);// / CLOCKS_PER_SEC;
 }
 
 // Функция для чтения уже обработанных матриц из файла

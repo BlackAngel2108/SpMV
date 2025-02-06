@@ -10,6 +10,8 @@ foreach(sample_filename ${samples_list})
   add_executable(${sample} ${sample_filename})
   target_include_directories(${sample} PUBLIC ${MP2_INCLUDE})
   target_link_libraries(${sample} ${MP2_LIBRARY})
+  set_property(TARGET ${sample} PROPERTY CXX_STANDARD 17)
+  set_property(TARGET ${sample} PROPERTY CXX_STANDARD_REQUIRED ON)
   set_target_properties(${sample} PROPERTIES
     OUTPUT_NAME "${sample}"
     PROJECT_LABEL "${sample}"

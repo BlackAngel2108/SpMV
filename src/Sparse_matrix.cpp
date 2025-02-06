@@ -10,6 +10,7 @@ COO_matrix::COO_matrix(std::string filename) {
     infile.read(reinterpret_cast<char*>(&rows), sizeof(rows));
     infile.read(reinterpret_cast<char*>(&cols), sizeof(cols));
     infile.read(reinterpret_cast<char*>(&size), sizeof(size));
+    std::cout<<size<<std::endl;
 
     rows_id.resize(size);
     colums_id.resize(size);
@@ -26,9 +27,9 @@ COO_matrix::COO_matrix(std::string filename) {
 
 
 std::vector<double> COO_matrix::SpMV(std::vector<double>& x) {
-    # pragma omp parallel for
     std::vector<double> y(rows, 0.0);
-    for (size_t i = 0; i < size; ++i) {
+    # pragma omp parallel for
+    for (int i = 0; i < size; ++i) {
         int row = rows_id[i];
         double value = data[i];
         int col = colums_id[i];
@@ -102,7 +103,7 @@ DIAG_matrix::DIAG_matrix(std::string filename) {
 
 std::vector<double> DIAG_matrix::SpMV(std::vector<double>& vec) {
     std::vector<double> result(rows, 0.0);
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for (auto& diag : diagonals) {
         int diagIndex = diag.first;
         for (auto& elem : diag.second) {
@@ -110,7 +111,7 @@ std::vector<double> DIAG_matrix::SpMV(std::vector<double>& vec) {
             double value = elem.second;
             int col = row + diagIndex;
             if (col >= 0 && col < cols) {
-                #pragma omp atomic
+                //#pragma omp atomic
                 result[row] += value * vec[col];
             }
         }
