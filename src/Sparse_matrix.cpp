@@ -102,7 +102,7 @@ DIAG_matrix::DIAG_matrix(std::string filename) {
 
 std::vector<double> DIAG_matrix::SpMV(std::vector<double>& vec) {
     std::vector<double> result(rows, 0.0);
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for (auto& diag : diagonals) {
         int diagIndex = diag.first;
         for (auto& elem : diag.second) {
@@ -110,7 +110,7 @@ std::vector<double> DIAG_matrix::SpMV(std::vector<double>& vec) {
             double value = elem.second;
             int col = row + diagIndex;
             if (col >= 0 && col < cols) {
-                #pragma omp atomic
+                //#pragma omp atomic
                 result[row] += value * vec[col];
             }
         }

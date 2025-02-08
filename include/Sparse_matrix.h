@@ -57,9 +57,9 @@ public:
 
 class ELLPack_matrix : public Sparse_matrix {
 private:
-    std::vector<std::vector<double>> values;      // Массив значений ненулевых элементов
-    std::vector<std::vector<int>> col_indices;    // Массив индексов столбцов
-    int max_non_zero;                             // Максимальное количество ненулевых элементов в строке
+    std::vector<std::vector<double>> values;      // Array of non-zero element values
+    std::vector<std::vector<int>> col_indices;    // Array of column indices
+    int max_non_zero;                             // Maximum number of non-zero elements per row
 
 public:
     ELLPack_matrix(std::string filename);
@@ -68,11 +68,11 @@ public:
 
 class SELL_C_matrix : public Sparse_matrix {
 private:
-    std::vector<std::vector<double>> values;      // Массив значений ненулевых элементов
-    std::vector<std::vector<int>> col_indices;    // Массив индексов столбцов
-    std::vector<int> row_pointers;                // Указатели начала сегменов
-    int segment_size;                             // Размер сегмента
-    int max_non_zero;                             // Максимальное количество ненулевых элементов в строке
+    std::vector<std::vector<double>> values;      // Array of non-zero element values
+    std::vector<std::vector<int>> col_indices;    // Array of column indices
+    std::vector<int> row_pointers;                // Segment start pointers
+    int segment_size;                             // Segment size
+    int max_non_zero;                             // Maximum number of non-zero elements per row
 
 public:
     SELL_C_matrix(std::string filename, int segment_size);
@@ -81,12 +81,12 @@ public:
 
 class SELL_C_sigma_matrix : public Sparse_matrix {
 private:
-    std::vector<std::vector<double>> values;      // Массив значений ненулевых элементов
-    std::vector<std::vector<int>> col_indices;    // Массив индексов столбцов
-    std::vector<int> row_pointers;                // Указатели начала строк
-    int segment_size;                             // Размер сегмента
-    int max_non_zero;                             // Максимальное количество ненулевых элементов в строке
-    int sigma;                                    // Количество ненулевых элементов на строку в сегменте
+    std::vector<std::vector<double>> values;      // Array of non-zero element values
+    std::vector<std::vector<int>> col_indices;    // Array of column indices
+    std::vector<int> row_pointers;                // Row start pointers
+    int segment_size;                             // Segment size
+    int max_non_zero;                             // Maximum number of non-zero elements per row
+    int sigma;                                    // Number of non-zero elements per row in a segment
 
 public:
     SELL_C_sigma_matrix(std::string filename, int segment_size, int sigma);

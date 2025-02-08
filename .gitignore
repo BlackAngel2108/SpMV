@@ -9,7 +9,6 @@ matrix
 bin_matrix
 *.csv
 *.png
-toolchain.cmake
 *.1
 
 
