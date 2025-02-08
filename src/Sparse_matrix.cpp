@@ -3,7 +3,7 @@
 COO_matrix::COO_matrix(std::string filename) {
     std::ifstream infile(filename, std::ios::binary);
     if (!infile.is_open()) {
-        std::cerr << "Ошибка открытия файла для чтения: " << filename << std::endl;
+        std::cerr << "Error opening file for reading: " << filename << std::endl;
         return;
     }
 
@@ -25,15 +25,14 @@ COO_matrix::COO_matrix(std::string filename) {
     infile.close();
 }
 
-
 std::vector<double> COO_matrix::SpMV(std::vector<double>& x) {
     std::vector<double> y(rows, 0.0);
-    # pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < size; ++i) {
         int row = rows_id[i];
         double value = data[i];
         int col = colums_id[i];
-        #pragma omp atomic
+#pragma omp atomic
         y[row] += value * x[col];
     }
     return y;
@@ -51,7 +50,7 @@ CSR_matrix::CSR_matrix(std::string filename) {
 
     row_pointers.resize(rows + 1, 0);
 
-    // Подсчет количества ненулевых элементов в каждой строке
+    // Count the number of non-zero elements in each row
     for (size_t i = 0; i < size; ++i) {
         row_pointers[coo_rows[i] + 1]++;
     }
@@ -75,7 +74,7 @@ CSR_matrix::CSR_matrix(std::string filename) {
 
 std::vector<double> CSR_matrix::SpMV(std::vector<double>& vec) {
     std::vector<double> result(rows, 0.0);
-    #pragma omp parallel for
+#pragma omp parallel for
     for (int row = 0; row < rows; ++row) {
         for (int i = row_pointers[row]; i < row_pointers[row + 1]; ++i) {
             int col = column_indices[i];
@@ -103,7 +102,7 @@ DIAG_matrix::DIAG_matrix(std::string filename) {
 
 std::vector<double> DIAG_matrix::SpMV(std::vector<double>& vec) {
     std::vector<double> result(rows, 0.0);
-    //#pragma omp parallel for
+    #pragma omp parallel for
     for (auto& diag : diagonals) {
         int diagIndex = diag.first;
         for (auto& elem : diag.second) {
@@ -111,14 +110,13 @@ std::vector<double> DIAG_matrix::SpMV(std::vector<double>& vec) {
             double value = elem.second;
             int col = row + diagIndex;
             if (col >= 0 && col < cols) {
-                //#pragma omp atomic
+                #pragma omp atomic
                 result[row] += value * vec[col];
             }
         }
     }
     return result;
 }
-
 
 ELLPack_matrix::ELLPack_matrix(std::string filename) {
     COO_matrix cooMatrix(filename);
@@ -130,7 +128,7 @@ ELLPack_matrix::ELLPack_matrix(std::string filename) {
     std::vector<int> coo_rows = cooMatrix.get_rows_id();
     std::vector<int> coo_cols = cooMatrix.get_cols_id();
 
-    // Подсчет количества ненулевых элементов в каждой строке
+    // Count the number of non-zero elements in each row
     std::vector<int> row_counts(rows, 0);
     for (size_t i = 0; i < size; ++i) {
         row_counts[coo_rows[i]]++;
@@ -154,7 +152,7 @@ ELLPack_matrix::ELLPack_matrix(std::string filename) {
 
 std::vector<double> ELLPack_matrix::SpMV(std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
-    #pragma omp parallel for
+#pragma omp parallel for
     for (int row = 0; row < rows; ++row) {
         for (int i = 0; i < max_non_zero; ++i) {
             if (col_indices[row][i] != -1) {
@@ -164,7 +162,6 @@ std::vector<double> ELLPack_matrix::SpMV(std::vector<double>& x) {
     }
     return result;
 }
-
 
 SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_size(segment_size) {
     COO_matrix cooMatrix(filename);
@@ -176,7 +173,7 @@ SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_s
     std::vector<int> coo_rows = cooMatrix.get_rows_id();
     std::vector<int> coo_cols = cooMatrix.get_cols_id();
 
-    // Подсчет количества ненулевых элементов в каждой строке
+    // Count the number of non-zero elements in each row
     std::vector<int> row_counts(rows, 0);
     for (size_t i = 0; i < size; ++i) {
         row_counts[coo_rows[i]]++;
@@ -262,13 +259,13 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
     std::vector<int> coo_rows = cooMatrix.get_rows_id();
     std::vector<int> coo_cols = cooMatrix.get_cols_id();
 
-    // Подсчет количества ненулевых элементов в каждой строке
+    // Count the number of non-zero elements in each row
     std::vector<int> row_counts(rows, 0);
     for (size_t i = 0; i < size; ++i) {
         row_counts[coo_rows[i]]++;
     }
 
-    // Сортировка строк по блокам размером sigma
+    // Sort rows in blocks of size sigma
     std::vector<int> row_order(rows);
     for (int i = 0; i < rows; ++i) {
         row_order[i] = i;
@@ -291,7 +288,7 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
         int start_row = segment * segment_size;
         int end_row = std::min(start_row + segment_size, rows);
 
-        // Находим максимальное количество ненулевых элементов в текущем сегменте
+        // Find the maximum number of non-zero elements in the current segment
         for (int row = start_row; row < end_row; row++) {
             if (row_counts[row_order[row]] > segment_max_non_zero[segment]) {
                 segment_max_non_zero[segment] = row_counts[row_order[row]];

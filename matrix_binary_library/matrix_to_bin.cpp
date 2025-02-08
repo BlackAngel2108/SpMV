@@ -7,51 +7,52 @@
 #include <fstream>
 #include <filesystem>
 namespace fs = std::filesystem;
+
 struct MatrixElement {
     int row;
     int col;
     double value;
 };
 
-// Функция для чтения матрицы из файла формата .mtx
+// Function to read a matrix from a .mtx file
 std::vector<MatrixElement> readMatrixFromMTX(const std::string& filename, int& rows, int& cols) {
     std::ifstream file(filename);
     std::vector<MatrixElement> matrix;
     if (!file.is_open()) {
-        std::cerr << "Ошибка открытия файла " << filename << std::endl;
+        std::cerr << "Error opening file " << filename << std::endl;
         return matrix;
     }
 
     std::string line;
     bool sizeRead = false;
     while (std::getline(file, line)) {
-        if (line[0] == '%') continue; // Пропуск комментариев
+        if (line[0] == '%') continue; // Skip comments
 
         std::istringstream iss(line);
         if (!sizeRead) {
-            iss >> rows >> cols; // Считывание размерности
+            iss >> rows >> cols; // Read dimensions
             sizeRead = true;
             continue;
         }
 
         int row, col;
-        double value = 1.0; // Значение по умолчанию
+        double value = 1.0; // Default value
         iss >> row >> col;
         if (!(iss >> value)) {
             value = 1.0;
         }
-        matrix.push_back({ row - 1, col - 1, value }); // Преобразование индексов к нулевой основе
+        matrix.push_back({ row - 1, col - 1, value }); // Convert indices to zero-based
     }
 
     file.close();
     return matrix;
 }
 
-// Функция для записи матрицы в бинарный файл COO формат
+// Function to write a matrix to a binary file in COO format
 void writeMatrixToBinaryCOO(const std::string& filename, const std::vector<MatrixElement>& matrix, int rows, int cols) {
     std::ofstream outfile(filename, std::ios::binary);
     if (!outfile.is_open()) {
-        std::cerr << "Ошибка открытия файла для записи " << filename << std::endl;
+        std::cerr << "Error opening file for writing " << filename << std::endl;
         return;
     }
 
@@ -69,13 +70,13 @@ void writeMatrixToBinaryCOO(const std::string& filename, const std::vector<Matri
     outfile.close();
 }
 
-// Функция для чтения матрицы из бинарного файла COO формат
+// Function to read a matrix from a binary file in COO format
 std::vector<MatrixElement> readMatrixFromBinaryCOO(const std::string& filename, int& rows, int& cols) {
     std::ifstream infile(filename, std::ios::binary);
     std::vector<MatrixElement> matrix;
 
     if (!infile.is_open()) {
-        std::cerr << "Ошибка открытия файла для чтения " << filename << std::endl;
+        std::cerr << "Error opening file for reading " << filename << std::endl;
         return matrix;
     }
 
@@ -97,13 +98,11 @@ std::vector<MatrixElement> readMatrixFromBinaryCOO(const std::string& filename, 
 }
 
 int main() {
-    setlocale(LC_ALL, "Russian");
-
     std::string matrix_folder = "../../matrix_to_git";
     std::string bin_folder = "../../bin_matrix";
 
     if (!fs::exists(matrix_folder) || !fs::is_directory(matrix_folder)) {
-        std::cerr << "Ошибка: папка " << matrix_folder << " не существует или не является директорией." << std::endl;
+        std::cerr << "Error: folder " << matrix_folder << " does not exist or is not a directory." << std::endl;
         return 1;
     }
 
@@ -113,32 +112,33 @@ int main() {
 
     for (const auto& entry : fs::directory_iterator(matrix_folder)) {
         if (entry.is_regular_file() && entry.path().extension() == ".mtx") {
-            std::string mtx_filename = entry.path().string(); // Полный путь к .mtx файлу
-            std::string base_filename = entry.path().stem().string(); // Имя файла без расширения
-            std::string bin_filename = bin_folder + "/" + base_filename + ".bin"; // Путь для сохранения бинарного файла
-            std::string bin_filename2 = bin_folder + "/" +"big" +"/"+ base_filename + ".bin";
-            std::cout << "Чтение файла: " << mtx_filename << std::endl;
+            std::string mtx_filename = entry.path().string(); // Full path to the .mtx file
+            std::string base_filename = entry.path().stem().string(); // Filename without extension
+            std::string bin_filename = bin_folder + "/" + base_filename + ".bin"; // Path to save the binary file
+            std::string bin_filename2 = bin_folder + "/" + "big" + "/" + base_filename + ".bin";
+            std::cout << "Reading file: " << mtx_filename << std::endl;
 
-            if (fs::exists(bin_filename) || fs::exists(bin_filename2) ){
-                std::cout << "Файл " << bin_filename << " уже существует. Пропускаем создание." << std::endl;
+            if (fs::exists(bin_filename) || fs::exists(bin_filename2)) {
+                std::cout << "File " << bin_filename << " already exists. Skipping creation." << std::endl;
                 continue;
             }
             int rows = 0, cols = 0;
             std::vector<MatrixElement> matrix = readMatrixFromMTX(mtx_filename, rows, cols);
             if (matrix.empty()) {
-                std::cerr << "Ошибка: не удалось прочитать матрицу из файла " << mtx_filename << std::endl;
+                std::cerr << "Error: failed to read matrix from file " << mtx_filename << std::endl;
                 continue;
             }
 
-            std::cout << "Преобразование в COO формат и запись в бинарный файл: " << bin_filename << std::endl;
+            std::cout << "Converting to COO format and writing to binary file: " << bin_filename << std::endl;
 
             writeMatrixToBinaryCOO(bin_filename, matrix, rows, cols);
         }
     }
 
-    std::cout << "Обработка завершена." << std::endl;
+    std::cout << "Processing complete." << std::endl;
     return 0;
-    }
+}
+
 /*
     // Чтение из .mtx файла
     std::vector<MatrixElement> matrix = readMatrixFromMTX("../../matrix/ash958.mtx", rows, cols);

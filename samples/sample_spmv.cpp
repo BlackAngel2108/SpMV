@@ -16,23 +16,23 @@ double SPMV_time(std::vector<double>& ans, Sparse_matrix& matrix, std::vector<do
     return (double)(endTime - startTime);// / CLOCKS_PER_SEC;
 }
 
-// Функция для чтения уже обработанных матриц из файла
+// Function to read already processed matrices from a file
 std::unordered_set<std::string> read_processed_matrices(const std::string& filename) {
     std::unordered_set<std::string> processed_matrices;
     std::ifstream infile(filename);
     if (!infile.is_open()) {
-        return processed_matrices; // Если файл не существует, возвращаем пустой набор
+        return processed_matrices; // If the file does not exist, return an empty set
     }
 
     std::string line;
-    bool is_first_line = true; // Пропускаем заголовок
+    bool is_first_line = true; // Skip header
     while (std::getline(infile, line)) {
         if (is_first_line) {
             is_first_line = false;
-            continue; // Пропускаем первую строку (заголовок)
+            continue; // Skip the first line (header)
         }
         if (line.empty()) {
-            continue; // Пропускаем пустые строки
+            continue; // Skip empty lines
         }
         std::istringstream iss(line);
         std::string matrix_name;
@@ -49,15 +49,15 @@ int main(int argc, char* argv[]) {
     int skip_files;
     int target_file;
 
-    // Проверяем, переданы ли аргументы командной строки
+    // Check if command line arguments are provided
     if (argc < 3) {
-        std::cerr << "Использование: " << argv[0] << " <количество_файлов_для_пропуска> <номер_файла_для_обработки>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <number_of_files_to_skip> <target_file_number>" << std::endl;
         return 1;
     }
     skip_files = std::stoi(argv[1]);
     target_file = std::stoi(argv[2]);
 
-    // Параллельный блок для тестирования
+    // Parallel block for testing
 #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();
@@ -65,31 +65,31 @@ int main(int argc, char* argv[]) {
     }
 
     std::string bin_folder = "../../bin_matrix";
-    std::string output_file = "../../results.csv";    // Имя выходного файла
+    std::string output_file = "../../results.csv";    // Output file name
 
-    // Проверяем, существует ли файл results.csv
+    // Check if the file results.csv exists
     bool file_exists = fs::exists(output_file);
 
     std::ofstream outfile;
     if (file_exists) {
-        // Открываем файл для добавления данных
+        // Open the file for appending data
         outfile.open(output_file, std::ios::app);
     }
     else {
-        // Создаем новый файл и записываем заголовок
+        // Create a new file and write the header
         outfile.open(output_file);
         outfile << "Matrix," << "COO_time," << " CSR_time," << " DIAG_time," << " ELLPack_time," << "ELL_C_time," << "SELL_C_sigma_time," << std::endl;
     }
 
     if (!outfile.is_open()) {
-        std::cerr << "Ошибка: не удалось открыть файл " << output_file << " для записи." << std::endl;
+        std::cerr << "Error: unable to open file " << output_file << " for writing." << std::endl;
         return 1;
     }
 
-    // Читаем уже обработанные матрицы
+    // Read already processed matrices
     std::unordered_set<std::string> processed_matrices = read_processed_matrices(output_file);
 
-    // Если файл существует, проверяем количество уже записанных строк
+    // If the file exists, check the number of already written rows
     int existing_rows = 0;
     if (file_exists) {
         std::ifstream infile(output_file);
@@ -100,47 +100,47 @@ int main(int argc, char* argv[]) {
         infile.close();
     }
 
-    // Если количество строк меньше skip_files, добавляем недостающие строки
-    if (existing_rows < skip_files + 1) { // +1 для заголовка
+    // If the number of rows is less than skip_files, add the missing rows
+    if (existing_rows < skip_files + 1) { // +1 for the header
         int missing_rows = skip_files + 1 - existing_rows;
         for (int i = 0; i < missing_rows; ++i) {
-            outfile << ", , , , , " << std::endl; // Записываем пустые строки
+            outfile << ", , , , , " << std::endl; // Write empty rows
         }
     }
 
     if (!fs::exists(bin_folder) || !fs::is_directory(bin_folder)) {
-        std::cerr << "Ошибка: папка " << bin_folder << " не существует или не является директорией." << std::endl;
+        std::cerr << "Error: folder " << bin_folder << " does not exist or is not a directory." << std::endl;
         return 1;
     }
 
-    // Проходим по всем файлам в папке
+    // Iterate over all files in the folder
     int file_count = 0;
     for (const auto& entry : fs::directory_iterator(bin_folder)) {
-        if (entry.is_regular_file()) { // Проверяем, что это файл
+        if (entry.is_regular_file()) { // Check if it is a file
             file_count++;
 
-            // Пропускаем файлы до skip_files
+            // Skip files until skip_files
             if (file_count <= skip_files) {
-                std::cout << "Пропускаем файл: " << entry.path().string() << std::endl;
+                std::cout << "Skipping file: " << entry.path().string() << std::endl;
                 continue;
             }
 
-            // Если target_file != -1, обрабатываем только указанный файл
+            // If target_file != -1, process only the specified file
             if (target_file != -1 && file_count != target_file) {
-                std::cout << "Пропускаем файл: " << entry.path().string() << std::endl;
+                std::cout << "Skipping file: " << entry.path().string() << std::endl;
                 continue;
             }
 
-            std::string filename = entry.path().string(); // Полный путь к файлу
-            std::string base_name = entry.path().stem().string(); // Имя файла без расширения
+            std::string filename = entry.path().string(); // Full path to the file
+            std::string base_name = entry.path().stem().string(); // File name without extension
 
-            // Проверяем, была ли матрица уже обработана
+            // Check if the matrix has already been processed
             if (processed_matrices.find(base_name) != processed_matrices.end()) {
-                std::cout << "Матрица " << base_name << " уже обработана. Пропускаем." << std::endl;
-                continue; // Пропускаем этот файл
+                std::cout << "Matrix " << base_name << " already processed. Skipping." << std::endl;
+                continue; // Skip this file
             }
 
-            std::cout << "Чтение файла: " << filename << std::endl;
+            std::cout << "Reading file: " << filename << std::endl;
             COO_matrix coo_matrix(filename);
             int size = coo_matrix.get_cols();
             std::vector<double> b(size, 1);
@@ -184,6 +184,6 @@ int main(int argc, char* argv[]) {
         }
     }
     outfile.close();
-    std::cout << "Обработка завершена. Результаты записаны в файл " << output_file << std::endl;
+    std::cout << "Processing complete. Results written to file " << output_file << std::endl;
     return 0;
 }
