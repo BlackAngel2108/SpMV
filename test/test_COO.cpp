@@ -3,6 +3,21 @@
 #include <stdio.h> 
 #include <time.h> 
 
+TEST(Sparse_matrix, omp) {
+    //#pragma omp parallel {
+    //        int thread_id = omp_get_thread_num();
+    //        std::cout << "Hello from thread " << thread_id << std::endl;
+    //    }
+    ASSERT_NO_THROW(1 + 1 == 2);
+}
+TEST(Sparse_matrix, omp) {
+    //#pragma omp parallel {
+    //        int thread_id = omp_get_thread_num();
+    //        std::cout << "Hello from thread " << thread_id << std::endl;
+    //    }
+    ASSERT_NO_THROW(1 + 1 == 2);
+}
+
 TEST(Sparse_matrix, can_read_bin_coo) {
     std::string path2("../../bin_matrix/ash958.bin");
     ASSERT_NO_THROW(COO_matrix mat(path2));
