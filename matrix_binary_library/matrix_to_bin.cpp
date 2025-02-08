@@ -99,7 +99,7 @@ std::vector<MatrixElement> readMatrixFromBinaryCOO(const std::string& filename, 
 int main() {
     setlocale(LC_ALL, "Russian");
 
-    std::string matrix_folder = "../../matrix";
+    std::string matrix_folder = "../../matrix_to_git";
     std::string bin_folder = "../../bin_matrix";
 
     if (!fs::exists(matrix_folder) || !fs::is_directory(matrix_folder)) {
