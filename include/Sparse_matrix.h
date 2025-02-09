@@ -55,14 +55,14 @@ public:
     std::vector<double> SpMV(std::vector<double>& vec) override;
 };
 
-class ELLPack_matrix : public Sparse_matrix {
+class LPack_matrix : public Sparse_matrix {
 private:
     std::vector<std::vector<double>> values;      // Array of non-zero element values
     std::vector<std::vector<int>> col_indices;    // Array of column indices
     int max_non_zero;                             // Maximum number of non-zero elements per row
 
 public:
-    ELLPack_matrix(std::string filename);
+    LPack_matrix(std::string filename);
     std::vector<double> SpMV(std::vector<double>& x) override;
 };
 

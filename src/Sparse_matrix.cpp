@@ -118,7 +118,7 @@ std::vector<double> DIAG_matrix::SpMV(std::vector<double>& vec) {
     return result;
 }
 
-ELLPack_matrix::ELLPack_matrix(std::string filename) {
+LPack_matrix::LPack_matrix(std::string filename) {
     COO_matrix cooMatrix(filename);
     rows = cooMatrix.get_rows();
     cols = cooMatrix.get_cols();
@@ -150,7 +150,7 @@ ELLPack_matrix::ELLPack_matrix(std::string filename) {
     }
 }
 
-std::vector<double> ELLPack_matrix::SpMV(std::vector<double>& x) {
+std::vector<double> LPack_matrix::SpMV(std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
 #pragma omp parallel for
     for (int row = 0; row < rows; ++row) {
@@ -277,6 +277,12 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
             [&row_counts](int a, int b) { return row_counts[a] > row_counts[b]; });
     }
 
+    // Create a mapping from original row index to its new position after sorting
+    std::vector<int> row_to_sorted_index(rows);
+    for (int i = 0; i < rows; ++i) {
+        row_to_sorted_index[row_order[i]] = i;
+    }
+
     int num_segments = (rows + segment_size - 1) / segment_size;
 
     values.resize(num_segments);
@@ -295,8 +301,8 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
             }
         }
 
-        values[segment].resize(segment_size * segment_max_non_zero[segment], 0.0);
-        col_indices[segment].resize(segment_size * segment_max_non_zero[segment], -1);
+        values[segment].resize(static_cast<size_t>(segment_size) * static_cast<size_t>(segment_max_non_zero[segment]), 0.0);
+        col_indices[segment].resize(static_cast<size_t>(segment_size) * static_cast<size_t>(segment_max_non_zero[segment]), -1);
     }
 
     std::vector<int> current_index(rows, 0);
@@ -305,10 +311,10 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
         int col = coo_cols[i];
         double value = coo_values[i];
 
-        int segment = row / segment_size;
-        int offset = std::find(row_order.begin() + segment * segment_size,
-            row_order.begin() + (segment + 1) * segment_size, row) -
-            (row_order.begin() + segment * segment_size);
+        // Use the mapping to find the correct segment and offset
+        int sorted_index = row_to_sorted_index[row];
+        int segment = sorted_index / segment_size;
+        int offset = sorted_index % segment_size;
 
         values[segment][offset * segment_max_non_zero[segment] + current_index[row]] = value;
         col_indices[segment][offset * segment_max_non_zero[segment] + current_index[row]] = col;
