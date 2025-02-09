@@ -30,3 +30,16 @@ TEST(Lpack_Sparse_matrix, test_can_multiply_LPack_time) {
     double seconds = (double)(endTime - startTime) / CLOCKS_PER_SEC;
     ASSERT_NO_THROW(printf("The time: %f seconds\n", seconds););
 }
+TEST(Lpack_Sparse_matrix, test_can_multiply_LPack_time) {
+    std::string path("../../bin_matrix/atmosmodm.bin");
+    LPack_matrix mat(path);
+    int size = mat.get_cols();
+    std::vector<double> b(size, 1);
+    std::vector<double> ans(size);
+    double startTime, endTime;
+    startTime = clock();
+    b = mat.SpMV(b);
+    endTime = clock();
+    double seconds = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+    ASSERT_NO_THROW(printf("The time: %f seconds\n", seconds););
+}
