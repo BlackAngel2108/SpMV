@@ -15,11 +15,23 @@ COO_matrix::COO_matrix(std::string filename) {
     rows_id.resize(size);
     colums_id.resize(size);
     data.resize(size);
-
+    // Чтение данных параллельно
+//#pragma omp parallel for
     for (size_t i = 0; i < size; ++i) {
-        infile.read(reinterpret_cast<char*>(&rows_id[i]), sizeof(int));
-        infile.read(reinterpret_cast<char*>(&colums_id[i]), sizeof(int));
-        infile.read(reinterpret_cast<char*>(&data[i]), sizeof(double));
+        int row_id, col_id;
+        double value;
+
+        // Каждый поток читает свой блок данных
+//#pragma omp critical
+        {
+            infile.read(reinterpret_cast<char*>(&row_id), sizeof(int));
+            infile.read(reinterpret_cast<char*>(&col_id), sizeof(int));
+            infile.read(reinterpret_cast<char*>(&value), sizeof(double));
+        }
+
+        rows_id[i] = row_id;
+        colums_id[i] = col_id;
+        data[i] = value;
     }
 
     infile.close();
@@ -27,12 +39,12 @@ COO_matrix::COO_matrix(std::string filename) {
 
 std::vector<double> COO_matrix::SpMV(std::vector<double>& x) {
     std::vector<double> y(rows, 0.0);
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int i = 0; i < size; ++i) {
         int row = rows_id[i];
         double value = data[i];
         int col = colums_id[i];
-#pragma omp atomic
+//#pragma omp atomic
         y[row] += value * x[col];
     }
     return y;
@@ -74,7 +86,7 @@ CSR_matrix::CSR_matrix(std::string filename) {
 
 std::vector<double> CSR_matrix::SpMV(std::vector<double>& vec) {
     std::vector<double> result(rows, 0.0);
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int row = 0; row < rows; ++row) {
         for (int i = row_pointers[row]; i < row_pointers[row + 1]; ++i) {
             int col = column_indices[i];
@@ -118,7 +130,7 @@ std::vector<double> DIAG_matrix::SpMV(std::vector<double>& vec) {
     return result;
 }
 
-LPack_matrix::LPack_matrix(std::string filename) {
+ELLPack_matrix::ELLPack_matrix(std::string filename) {
     COO_matrix cooMatrix(filename);
     rows = cooMatrix.get_rows();
     cols = cooMatrix.get_cols();
@@ -130,7 +142,9 @@ LPack_matrix::LPack_matrix(std::string filename) {
 
     // Count the number of non-zero elements in each row
     std::vector<int> row_counts(rows, 0);
+//#pragma omp parallel for
     for (size_t i = 0; i < size; ++i) {
+//#pragma omp atomic
         row_counts[coo_rows[i]]++;
     }
     max_non_zero = *std::max_element(row_counts.begin(), row_counts.end());
@@ -150,15 +164,20 @@ LPack_matrix::LPack_matrix(std::string filename) {
     }
 }
 
-std::vector<double> LPack_matrix::SpMV(std::vector<double>& x) {
+std::vector<double> ELLPack_matrix::SpMV(std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
-#pragma omp parallel for
+
+  //omp_set_num_threads(4);
+#pragma omp parallel for schedule(dynamic,1000)
+
     for (int row = 0; row < rows; ++row) {
-        for (int i = 0; i < max_non_zero; ++i) {
+    double local_sum =0;
+    for (int i = 0; i < max_non_zero; ++i){
             if (col_indices[row][i] != -1) {
-                result[row] += values[row][i] * x[col_indices[row][i]];
+                local_sum += values[row][i] * x[col_indices[row][i]];
             }
         }
+    result[row]+= local_sum;
     }
     return result;
 }
@@ -227,7 +246,7 @@ SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_s
 std::vector<double> SELL_C_matrix::SpMV(std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int segment = 0; segment < values.size(); segment++) {
         int segment_max_non_zero = values[segment].size() / segment_size;
 
@@ -239,7 +258,7 @@ std::vector<double> SELL_C_matrix::SpMV(std::vector<double>& x) {
                 int index = offset * segment_max_non_zero + i;
 
                 if (col_indices[segment][index] != -1) {
-#pragma omp atomic
+//#pragma omp atomic
                     result[row] += values[segment][index] * x[col_indices[segment][index]];
                 }
             }
@@ -330,7 +349,7 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
 std::vector<double> SELL_C_sigma_matrix::SpMV(std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int segment = 0; segment < values.size(); segment++) {
         int segment_max_non_zero = values[segment].size() / segment_size;
 
@@ -342,7 +361,7 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(std::vector<double>& x) {
                 int index = offset * segment_max_non_zero + i;
 
                 if (col_indices[segment][index] != -1) {
-#pragma omp atomic
+//#pragma omp atomic
                     result[row] += values[segment][index] * x[col_indices[segment][index]];
                 }
             }

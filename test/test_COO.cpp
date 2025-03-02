@@ -2,6 +2,7 @@
 #include "Sparse_matrix.h"
 #include <stdio.h> 
 #include <time.h> 
+#include <chrono>
 
 TEST(Sparse_matrix, can_read_bin_coo) {
     std::string path2("../../bin_matrix/ash958.bin");
@@ -9,9 +10,14 @@ TEST(Sparse_matrix, can_read_bin_coo) {
 }
 TEST(Sparse_matrix, can_read_bin_coo_right_size) {
     std::string path2("../../bin_matrix/ash958.bin");
+    double startTime, endTime;
+    startTime = clock();
     COO_matrix mat(path2);
+    endTime = clock();
+    double seconds = (double)(endTime - startTime) / CLOCKS_PER_SEC;
     int size= mat.get_size();
     int EXans = 1916;
+    printf("The time: %f seconds\n", seconds);
     EXPECT_EQ(size, EXans);
 }
 TEST(Sparse_matrix, can_multiply_COO) {
@@ -108,35 +114,42 @@ TEST(Sparse_matrix, can_multiply_csr_time) {
 ///
 
 
-TEST(Sparse_matrix, can_read_bin_LPack) {
+TEST(Sparse_matrix, can_read_bin_EELPack) {
 
     std::string path2("../../bin_matrix/ash958.bin");
-    ASSERT_NO_THROW(LPack_matrix mat(path2));
+    ASSERT_NO_THROW(ELLPack_matrix mat(path2));
 }
-TEST(Sparse_matrix, can_multiply_LPack) {
+TEST(Sparse_matrix, can_multiply_EELPack) {
     std::string path("../../bin_matrix/ash958.bin");
-    LPack_matrix mat(path);
+    double startTime, endTime;
+    startTime = clock();
+    ELLPack_matrix mat(path);
+    endTime = clock();
+    double seconds = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+    printf("The time of reading file: %f seconds\n", seconds);
     int size = mat.get_cols();
     std::vector<double> b(size, 1);
     std::vector<double> ans(size);
     ASSERT_NO_THROW(b = mat.SpMV(b));
 }
-TEST(Sparse_matrix, can_multiply_LPack_time) {
-    std::string path("../../bin_matrix/ash958.bin");
+TEST(Sparse_matrix, can_multiply_EELPack_time) {
+    //std::string path("../../bin_matrix/StocF-1465.bin");
+    std::string path("../../bin_matrix/big/road_usa.bin");
     const std::string path2("C:/SpMV/SpMV/bin_matrix/ash958_lpack.bin");
-    LPack_matrix mat(path);
+    ELLPack_matrix mat(path);
     int size = mat.get_cols();
     std::vector<double> b(size, 1);
     std::vector<double> ans(size);
-    double startTime, endTime;
-    startTime = clock();
-    for (int i = 0; i < 1000; i++) {
-        b = mat.SpMV(b);
-    }
+    auto start = std::chrono::high_resolution_clock::now();
     b = mat.SpMV(b);
-    endTime = clock();
-    double seconds = (double)(endTime - startTime) / CLOCKS_PER_SEC;
-    ASSERT_NO_THROW(printf("The time: %f seconds\n", seconds););
+    auto end = std::chrono::high_resolution_clock::now();
+
+    // Вычисление продолжительности
+    std::chrono::duration<double> elapsed = end - start;
+
+    // Вывод времени выполнения
+    std::cout << "Elapsed time: " << elapsed.count() << " seconds" << std::endl;
+    ASSERT_NO_THROW(printf("The time: %f seconds\n", elapsed.count()););
 }
 
 
@@ -245,7 +258,7 @@ TEST(Sparse_matrix, right_mult_coo_scr) {
     }
     EXPECT_EQ(flag, 0);
 }
-TEST(Sparse_matrix, right_mult_coo_lpack) {
+TEST(Sparse_matrix, right_mult_coo_eelpack) {
     const std::string path("../../bin_matrix/ash958.bin");
     COO_matrix mat(path);
     int size = mat.get_cols();
@@ -254,7 +267,7 @@ TEST(Sparse_matrix, right_mult_coo_lpack) {
     b = mat.SpMV(b);
     std::string path2("../../bin_matrix/ash958.bin");
     const std::string path3("../../bin_matrix/ash958.bin");
-    LPack_matrix mat2(path2);
+    ELLPack_matrix mat2(path2);
     int size2 = mat2.get_cols();
     std::vector<double> b2(size2, 1);
     b2 = mat2.SpMV(b2);
