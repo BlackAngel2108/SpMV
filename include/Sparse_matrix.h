@@ -15,7 +15,7 @@ protected:
     size_t size;
 
 public:
-    virtual std::vector<double> SpMV(std::vector<double>& vec) = 0;
+    virtual std::vector<double> SpMV(const std::vector<double>& vec) = 0;
     int get_cols() { return cols; }
     int get_size() { return size; }
     int get_rows() { return rows; }
@@ -29,7 +29,7 @@ private:
 
 public:
     COO_matrix(std::string filename);
-    std::vector<double> SpMV(std::vector<double>& x) override;
+    std::vector<double> SpMV(const std::vector<double>& x) override;
     std::vector<double> get_values() const { return data; }
     std::vector<int> get_rows_id() const { return rows_id; }
     std::vector<int> get_cols_id() const { return colums_id; }
@@ -43,7 +43,7 @@ private:
 
 public:
     CSR_matrix(std::string filename);
-    std::vector<double> SpMV(std::vector<double>& vec) override;
+    std::vector<double> SpMV(const std::vector<double>& vec) override;
 };
 
 class DIAG_matrix : public Sparse_matrix {
@@ -52,7 +52,7 @@ private:
 
 public:
     DIAG_matrix(std::string filename);
-    std::vector<double> SpMV(std::vector<double>& vec) override;
+    std::vector<double> SpMV(const std::vector<double>& vec) override;
 };
 
 class ELLPack_matrix : public Sparse_matrix {
@@ -63,7 +63,7 @@ private:
 
 public:
     ELLPack_matrix(std::string filename);
-    std::vector<double> SpMV(std::vector<double>& x) override;
+    std::vector<double> SpMV(const std::vector<double>& x) override;
 };
 
 class SELL_C_matrix : public Sparse_matrix {
@@ -76,7 +76,7 @@ private:
 
 public:
     SELL_C_matrix(std::string filename, int segment_size);
-    std::vector<double> SpMV(std::vector<double>& x) override;
+    std::vector<double> SpMV(const std::vector<double>& x) override;
 };
 
 class SELL_C_sigma_matrix : public Sparse_matrix {
@@ -90,5 +90,5 @@ private:
 
 public:
     SELL_C_sigma_matrix(std::string filename, int segment_size, int sigma);
-    std::vector<double> SpMV(std::vector<double>& x) override;
+    std::vector<double> SpMV(const std::vector<double>& x) override;
 };

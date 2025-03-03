@@ -37,7 +37,7 @@ COO_matrix::COO_matrix(std::string filename) {
     infile.close();
 }
 
-std::vector<double> COO_matrix::SpMV(std::vector<double>& x) {
+std::vector<double> COO_matrix::SpMV(const std::vector<double>& x) {
     std::vector<double> y(rows, 0.0);
 //#pragma omp parallel for
     for (int i = 0; i < size; ++i) {
@@ -84,7 +84,7 @@ CSR_matrix::CSR_matrix(std::string filename) {
     }
 }
 
-std::vector<double> CSR_matrix::SpMV(std::vector<double>& vec) {
+std::vector<double> CSR_matrix::SpMV(const std::vector<double>& vec) {
     std::vector<double> result(rows, 0.0);
 //#pragma omp parallel for
     for (int row = 0; row < rows; ++row) {
@@ -112,7 +112,7 @@ DIAG_matrix::DIAG_matrix(std::string filename) {
     }
 }
 
-std::vector<double> DIAG_matrix::SpMV(std::vector<double>& vec) {
+std::vector<double> DIAG_matrix::SpMV(const std::vector<double>& vec) {
     std::vector<double> result(rows, 0.0);
     //#pragma omp parallel for
     for (auto& diag : diagonals) {
@@ -164,7 +164,7 @@ ELLPack_matrix::ELLPack_matrix(std::string filename) {
     }
 }
 
-std::vector<double> ELLPack_matrix::SpMV(std::vector<double>& x) {
+std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
 
   //omp_set_num_threads(4);
@@ -172,10 +172,13 @@ std::vector<double> ELLPack_matrix::SpMV(std::vector<double>& x) {
 
     for (int row = 0; row < rows; ++row) {
     double local_sum =0;
+    int idx;
     for (int i = 0; i < max_non_zero; ++i){
-            if (col_indices[row][i] != -1) {
-                local_sum += values[row][i] * x[col_indices[row][i]];
+        idx = col_indices[row][i];
+            if ( idx == -1) {
+                continue;
             }
+            local_sum += values[row][i] * x[idx];
         }
     result[row]+= local_sum;
     }
@@ -243,7 +246,7 @@ SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_s
 //    return result;
 //}
 
-std::vector<double> SELL_C_matrix::SpMV(std::vector<double>& x) {
+std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
 
 //#pragma omp parallel for
@@ -346,7 +349,7 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
     }
 }
 
-std::vector<double> SELL_C_sigma_matrix::SpMV(std::vector<double>& x) {
+std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
 
 //#pragma omp parallel for
