@@ -3,6 +3,15 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+build
+build2
+matrix
+bin_matrix
+*.csv
+*.png
+*.1
+
+
 # User-specific files
 *.rsuser
 *.suo
