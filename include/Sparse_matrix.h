@@ -9,11 +9,11 @@
 #include <algorithm>
 #include <omp.h>
 
-#define avx2
+#define risc
 //#define simple
 //#define omp
-#ifdef avx2
-#include <immintrin.h>
+#ifdef ricv
+#include <riscv_vector.h>
 #endif
 
 class Sparse_matrix {

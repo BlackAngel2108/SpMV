@@ -9,6 +9,11 @@ set(CMAKE_CXX_COMPILER "C:/msys64/mingw64/bin/g++")
 # Добавляем флаг -mavx2
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 
+if(COMPILER_SUPPORTS_CXX17)
+    message( STATUS "CXX17_supported")
+endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+
 find_package(OpenMP REQUIRED)
 
 if(OPENMP_FOUND)
