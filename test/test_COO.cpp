@@ -95,21 +95,22 @@ TEST(Sparse_matrix, can_multiply_csr) {
     ASSERT_NO_THROW(b = mat.SpMV(b));
 }
 TEST(Sparse_matrix, can_multiply_csr_time) {
-    std::string path("../../bin_matrix/ash958.bin");
+    //std::string path("../../bin_matrix/ash958.bin");
+    std::string path("../../bin_matrix/StocF-1465.bin");
     const std::string path2("C:/SpMV/SpMV/bin_matrix/ash958_csr.bin");
     CSR_matrix mat(path);
     int size = mat.get_cols();
     std::vector<double> b(size, 1);
     std::vector<double> ans(size);
-    double startTime, endTime;
-    startTime = omp_get_wtime();
-    for (int i = 0; i < 1000; i++) {
-        b = mat.SpMV(b);
-    }
+    auto start = std::chrono::high_resolution_clock::now();
     b = mat.SpMV(b);
-    endTime = omp_get_wtime();
-    double seconds = (double)(endTime - startTime);// / CLOCKS_PER_SEC;
-    ASSERT_NO_THROW(printf("The time: %f seconds\n", seconds););
+    auto end = std::chrono::high_resolution_clock::now();
+
+    // Вычисление продолжительности
+    std::chrono::duration<double> elapsed = end - start;
+
+    // Вывод времени выполнения
+    ASSERT_NO_THROW(printf("The time of SCR: %f seconds\n", elapsed.count()););
 }
 ///
 
@@ -133,8 +134,9 @@ TEST(Sparse_matrix, can_multiply_EELPack) {
     ASSERT_NO_THROW(b = mat.SpMV(b));
 }
 TEST(Sparse_matrix, can_multiply_EELPack_time) {
-    //std::string path("../../bin_matrix/StocF-1465.bin");
-    std::string path("../../bin_matrix/big/road_usa.bin");
+    std::string path("../../bin_matrix/StocF-1465.bin");
+    //std::string path("../../bin_matrix/ash958.bin");
+    //std::string path("../../bin_matrix/big/road_usa.bin");
     const std::string path2("C:/SpMV/SpMV/bin_matrix/ash958_lpack.bin");
     ELLPack_matrix mat(path);
     int size = mat.get_cols();
@@ -148,8 +150,7 @@ TEST(Sparse_matrix, can_multiply_EELPack_time) {
     std::chrono::duration<double> elapsed = end - start;
 
     // Вывод времени выполнения
-    std::cout << "Elapsed time: " << elapsed.count() << " seconds" << std::endl;
-    ASSERT_NO_THROW(printf("The time: %f seconds\n", elapsed.count()););
+    ASSERT_NO_THROW(printf("The time of ELLpack: %f seconds\n", elapsed.count()););
 }
 
 
@@ -169,21 +170,23 @@ TEST(Sparse_matrix, can_multiply_SELL_C) {
     ASSERT_NO_THROW(b = mat.SpMV(b));
 }
 TEST(Sparse_matrix, can_multiply_SELL_C_time) {
-    std::string path("../../bin_matrix/ash958.bin");
+    std::string path("../../bin_matrix/StocF-1465.bin");
+    //std::string path("../../bin_matrix/ash958.bin");
     const std::string path2("C:/SpMV/SpMV/bin_matrix/ash958_lpack.bin");
-    SELL_C_matrix mat(path,4);
+    SELL_C_matrix mat(path,32);
     int size = mat.get_cols();
     std::vector<double> b(size, 1);
     std::vector<double> ans(size);
-    double startTime, endTime;
-    startTime = clock();
-    for (int i = 0; i < 1000; i++) {
-        b = mat.SpMV(b);
-    }
+
+    auto start = std::chrono::high_resolution_clock::now();
     b = mat.SpMV(b);
-    endTime = clock();
-    double seconds = (double)(endTime - startTime) / CLOCKS_PER_SEC;
-    ASSERT_NO_THROW(printf("The time: %f seconds\n", seconds););
+    auto end = std::chrono::high_resolution_clock::now();
+
+    // Вычисление продолжительности
+    std::chrono::duration<double> elapsed = end - start;
+
+    // Вывод времени выполнения
+    ASSERT_NO_THROW(printf("The time of SELL_c: %f seconds\n", elapsed.count()););
 }
 
 
@@ -201,20 +204,21 @@ TEST(Sparse_matrix, can_multiply_SELL_C_sigma) {
     ASSERT_NO_THROW(b = mat.SpMV(b));
 }
 TEST(Sparse_matrix, can_multiply_SELL_C_sigma_time) {
-    std::string path("../../bin_matrix/ash958.bin");
-    SELL_C_sigma_matrix mat(path, 4,2);
+    //std::string path("../../bin_matrix/ash958.bin");
+    std::string path("../../bin_matrix/StocF-1465.bin");
+    SELL_C_sigma_matrix mat(path, 16,1024);
     int size = mat.get_cols();
     std::vector<double> b(size, 1);
     std::vector<double> ans(size);
-    double startTime, endTime;
-    startTime = clock();
-    for (int i = 0; i < 1000; i++) {
-        b = mat.SpMV(b);
-    }
+    auto start = std::chrono::high_resolution_clock::now();
     b = mat.SpMV(b);
-    endTime = clock();
-    double seconds = (double)(endTime - startTime) / CLOCKS_PER_SEC;
-    ASSERT_NO_THROW(printf("The time: %f seconds\n", seconds););
+    auto end = std::chrono::high_resolution_clock::now();
+
+    // Вычисление продолжительности
+    std::chrono::duration<double> elapsed = end - start;
+
+    // Вывод времени выполнения
+    ASSERT_NO_THROW(printf("The time of SELL_c_sigma: %f seconds\n", elapsed.count()););
 }
 
 

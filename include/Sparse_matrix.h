@@ -9,6 +9,13 @@
 #include <algorithm>
 #include <omp.h>
 
+#define avx2
+//#define simple
+//#define omp
+#ifdef avx2
+#include <immintrin.h>
+#endif
+
 class Sparse_matrix {
 protected:
     int rows, cols;

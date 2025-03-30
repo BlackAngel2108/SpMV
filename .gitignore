@@ -10,7 +10,8 @@ bin_matrix
 *.csv
 *.png
 *.1
-
+*.json
+*.rar
 
 # User-specific files
 *.rsuser
