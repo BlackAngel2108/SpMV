@@ -5,10 +5,6 @@ project(${PROJECT_NAME})
 
 set(CMAKE_CXX_COMPILER "/common/software/gcc-9.5.0/bin/g++")
 set(CMAKE_CXX_COMPILER "C:/msys64/mingw64/bin/g++")
-#if(COMPILER_SUPPORTS_CXX17)
-#    message( STATUS "CXX17_supported")
-#endif()
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
 # Добавляем флаг -mavx2
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
