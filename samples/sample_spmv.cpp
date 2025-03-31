@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
     else {
         // Create a new file and write the header
         outfile.open(output_file);
-        outfile << "Matrix," << "COO_time," << " CSR_time," << " DIAG_time," << " EELPack_time," << "SELL_C_time," << "SELL_C_sigma_time," << std::endl;
+        outfile << "Matrix," << "COO_time," << " CSR_time," << " DIAG_time," << " ELLPack_time," << "SELL_C_time," << "SELL_C_sigma_time," << std::endl;
     }
 
     if (!outfile.is_open()) {
@@ -158,13 +158,13 @@ int main(int argc, char* argv[]) {
 
             double t4 = 0;
             try {
-                std::cout << "   ELPack_matrix: " << filename << std::endl;
+                std::cout << "   ELLPack_matrix: " << filename << std::endl;
                 ELLPack_matrix Ellpack_matrix(filename);
                 t4 = SPMV_time(ans, Ellpack_matrix, b);
             }
             catch (...) {
                 t4 = 0;
-                std::cout << "ELPACK ERROR: " << std::endl;
+                std::cout << "ELLPACK ERROR: " << std::endl;
             }
 
             double t5 = 0;
