@@ -178,7 +178,7 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
                 continue;
             }
             local_sum += values[row][i] * x[idx];
-        }
+    }
     result[row]+= local_sum;
     }
     return result;
@@ -186,66 +186,34 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
 #ifdef risc
         std::vector<double> result(rows, 0.0);
 #ifdef omp
-#pragma omp parallel for schedule(dynamic,1000)
+#pragma omp parallel for schedule(dynamic)
 #endif
         for (int row = 0; row < rows; ++row) {
-            size_t vl; // Длина вектора
             double scalar_sum = 0.0;
 
-            // Инициализация векторного аккумулятора
-            vl = vsetvlmax_e64m1(); // Устанавливаем максимальную длину для double
-            vfloat64m1_t vec_sum = vfmv_v_f_f64m1(0.0, vl); // Векторный аккумулятор
+            size_t vlmax = __riscv_vsetvlmax_e64m1();// Устанавливаем максимальную длину для double
+
+            vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax);// Векторный аккумулятор
 
             int i = 0;
-            // Векторизованный цикл
-            for (; i + vl <= max_non_zero; i += vl) {
-                // Проверяем наличие -1 в текущем блоке
-                bool has_invalid = false;
-                for (int j = i; j < i + vl; ++j) {
-                    if (col_indices[row][j] == -1) {
-                        has_invalid = true;
-                        break;
-                    }
-                }
-
-                if (has_invalid) {
-                    // Скалярная обработка при наличии -1
-                    for (int j = i; j < i + vl; ++j) {
-                        if (col_indices[row][j] == -1) continue;
-                        scalar_sum += values[row][j] * x[col_indices[row][j]];
-                    }
-                    continue;
-                }
+            int k = max_non_zero;
+            for (size_t vl; k>0; k-=vl, i += vl) {
+                vl = __riscv_vsetvl_e64m1(k);
 
                 // Загрузка индексов столбцов (32-битные int)
-                vuint32m1_t col_idx = vlse32_v_u32m1(&col_indices[row][i], sizeof(int), vl);
+                vint32m1_t vec_indices = __riscv_vle32_v_i32m1(&col_indices[row][0], vl)
 
-                // Сбор значений x по индексам
-                double x_vals_buffer[vl];
-                for (int j = 0; j < vl; ++j) {
-                    x_vals_buffer[j] = x[col_indices[row][i + j]];
-                }
-                vfloat64m1_t x_vals = vle64_v_f64m1(x_vals_buffer, vl);
+                //загрузка значений вектора
+                vint64m1_t vec_indices_64 = __riscv_vwadd_vx_i64m1(vec_indices, 0, vl);
+                vfloat64m1_t x_vals = __riscv_vluxei64_v_f64m1(x, vec_indices_64, vl);
 
                 // Загрузка значений матрицы
-                vfloat64m1_t mat_vals = vle64_v_f64m1(&values[row][i], vl);
+                vfloat64m1_t mat_vals = __riscv_vle64_v_f64m1(&values[row][i], vl);
 
                 // Умножение и сложение (FMA)
-                vec_sum = vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
+                vec_sum = __riscv_vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
             }
-
-            // Скалярная обработка оставшихся элементов
-            for (; i < max_non_zero; ++i) {
-                if (col_indices[row][i] == -1) continue;
-                scalar_sum += values[row][i] * x[col_indices[row][i]];
-            }
-
-            // Редукция векторной суммы
-            double vec_sum_buffer[vl];
-            vse64_v_f64m1(vec_sum_buffer, vec_sum, vl);
-            for (int j = 0; j < vl; ++j) {
-                scalar_sum += vec_sum_buffer[j];
-            }
+            scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
 
             result[row] = scalar_sum;
         }
