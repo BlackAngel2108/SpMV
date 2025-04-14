@@ -9,9 +9,9 @@
 #include <algorithm>
 #include <omp.h>
 
-#define avx512
 //#define avx512
-//#define simple
+//#define avx2
+#define simple
 //#define omp
 
 #include <immintrin.h>

@@ -90,53 +90,35 @@ double time_DIAG(std::string path) {
 //    std::vector<double> ans(size);
 //    ASSERT_NO_THROW(b = mat.SpMV(b));
 //}
+void test_all(std::string path){
+    double t1 = time_DIAG(path);
+    double t2 = time_COO(path);
+    double t3 = time_CSR(path);
+    double t4 = time_sell_c_sigma(path);
+    double t5 = time_sell_c(path);
+    double t6 = time_Ellpack(path);
+    printf("The time COO: %f seconds\n", t2);
+    printf("The time DIAG: %f seconds\n", t1);
+    printf("The time CSR: %f seconds\n", t3);
+    printf("The time ELLPack: %f seconds\n", t6);
+    printf("The time SELL_C: %f seconds\n", t5);
+    printf("The time SELL_C_Sigma: %f seconds\n", t4);
+}
 TEST(TIME, test_StocF_1465) {
     std::string path("../../bin_matrix/StocF-1465.bin");
-    double t1 = time_DIAG(path);
-    double t2 = time_COO(path);
-    double t3 = time_CSR(path);
-    double t4 = time_sell_c_sigma(path);
-    double t5 = time_sell_c(path);
-    double t6 = time_Ellpack(path);
-    printf("The time COO: %f seconds\n", t2);
-    printf("The time DIAG: %f seconds\n", t1);
-    printf("The time CSR: %f seconds\n", t3);
-    printf("The time ELLPack: %f seconds\n", t6);
-    printf("The time SELL_C: %f seconds\n", t5);
-    printf("The time SELL_C_Sigma: %f seconds\n", t4);
+    test_all(path);
     ASSERT_NO_THROW(std::cout << path << "\n";);
 }
+/*
 TEST(TIME, test_rajat31) {
     std::string path("../../bin_matrix/rajat31.bin");
-    double t1 = time_DIAG(path);
-    double t2 = time_COO(path);
-    double t3 = time_CSR(path);
-    double t4 = time_sell_c_sigma(path);
-    double t5 = time_sell_c(path);
-    double t6 = time_Ellpack(path);
-    printf("The time COO: %f seconds\n", t2);
-    printf("The time DIAG: %f seconds\n", t1);
-    printf("The time CSR: %f seconds\n", t3);
-    printf("The time ELLPack: %f seconds\n", t6);
-    printf("The time SELL_C: %f seconds\n", t5);
-    printf("The time SELL_C_Sigma: %f seconds\n", t4);
+    test_all(path);
     ASSERT_NO_THROW(std::cout << path << "\n";);
-}
+}*/
 
 TEST(TIME, test_road_usa) {
     std::string path("../../bin_matrix/road_usa.bin");
-    double t1 = time_DIAG(path);
-    double t2 = time_COO(path);
-    double t3 = time_CSR(path);
-    double t4 = time_sell_c_sigma(path);
-    double t5 = time_sell_c(path);
-    double t6 = time_Ellpack(path);
-    printf("The time COO: %f seconds\n", t2);
-    printf("The time DIAG: %f seconds\n", t1);
-    printf("The time CSR: %f seconds\n", t3);
-    printf("The time ELLPack: %f seconds\n", t6);
-    printf("The time SELL_C: %f seconds\n", t5);
-    printf("The time SELL_C_Sigma: %f seconds\n", t4);
+    test_all(path);
     ASSERT_NO_THROW(std::cout << path << "\n";);
 }
 // TEST(Lpack_Sparse_matrix, test_can_multiply_LPack_time_big) {

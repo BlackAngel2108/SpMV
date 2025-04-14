@@ -85,7 +85,7 @@ std::vector<double> CSR_matrix::SpMV(const std::vector<double>& vec) {
     std::vector<double> result(rows, 0.0);
 #ifdef simple
 #ifdef omp
-#pragma omp parallel for
+#pragma omp parallel for(dynamic)
 #endif
     for (int row = 0; row < rows; ++row) {
         double tem_for_row = 0.0;
@@ -98,18 +98,16 @@ std::vector<double> CSR_matrix::SpMV(const std::vector<double>& vec) {
     return result;
 }
 #endif
-#ifdef avx512
+#if defined (avx512) || defined(avx2)
     #ifdef omp
-    #pragma omp parallel for
+    #pragma omp parallel for(dynamic)
     #endif
     for (int row = 0; row < rows; ++row) {
         __m512d local_sum = _mm512_setzero_pd();
         int row_start = row_pointers[row];
         int row_end = row_pointers[row + 1];
         int i = row_start;
-
-        // Обрабатываем по 8 элементов за раз
-        for (; i + 7 < row_end; i += 8) {
+        for (; row_end > 7; row_end -= 8, i += 8) {
             // Загружаем 8 индексов столбцов
             __m256i col_idx = _mm256_loadu_si256(
                 reinterpret_cast<const __m256i*>(&column_indices[i]));
@@ -118,16 +116,7 @@ std::vector<double> CSR_matrix::SpMV(const std::vector<double>& vec) {
             __m512d mat_vals = _mm512_loadu_pd(&values[i]);
 
             // Собираем 8 значений из вектора vec
-            __m512d vec_vals = _mm512_set_pd(
-                vec[_mm256_extract_epi32(col_idx, 7)],
-                vec[_mm256_extract_epi32(col_idx, 6)],
-                vec[_mm256_extract_epi32(col_idx, 5)],
-                vec[_mm256_extract_epi32(col_idx, 4)],
-                vec[_mm256_extract_epi32(col_idx, 3)],
-                vec[_mm256_extract_epi32(col_idx, 2)],
-                vec[_mm256_extract_epi32(col_idx, 1)],
-                vec[_mm256_extract_epi32(col_idx, 0)]
-            );
+            __m512d vec_vals = _mm512_i32gather_pd(col_idx, vec.data(), 8);
 
             // Умножаем и добавляем к аккумулятору
             local_sum = _mm512_fmadd_pd(mat_vals, vec_vals, local_sum);
@@ -220,17 +209,14 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
   //omp_set_num_threads(4);
 #ifdef omp 
-#pragma omp parallel for schedule(dynamic,1000)
+#pragma omp parallel for schedule(dynamic)
 #endif
     for (int row = 0; row < rows; ++row) {
     double local_sum =0;
     int idx;
     for (int i = 0; i < max_non_zero; ++i){
         idx = col_indices[row][i];
-            if ( idx == -1) {
-                continue;
-            }
-            local_sum += values[row][i] * x[idx];
+        local_sum += values[row][i] * x[idx];
         }
     result[row]+= local_sum;
     }
@@ -244,48 +230,33 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
         for (int row = 0; row < rows; ++row) {
             __m256d local_sum = _mm256_setzero_pd();  // Инициализируем аккумулятор нулями
 
-            int i = 0;
             // Обрабатываем по 4 элемента за раз (AVX2 работает с 256-битными регистрами, 4 double)
-            for (; i + 3 < max_non_zero; i += 4) {
+            int k = max_non_zero;
+            int i = 0;
+            for (; k > 3; k -= 4, i += 4) {
                 // Загружаем 4 индекса столбцов
                 __m128i idx = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&col_indices[row][i]));
-
-                // Проверяем, есть ли -1 в индексах
-                __m128i mask = _mm_cmpeq_epi32(idx, _mm_set1_epi32(-1));
-                if (_mm_movemask_epi8(mask) != 0) {
-                    // Если есть -1, обрабатываем оставшиеся элементы скалярно
-                    for (int j = i; j < i + 4; ++j) {
-                        if (col_indices[row][j] == -1) continue;
-                        result[row] += values[row][j] * x[col_indices[row][j]];
-                    }
-                    continue;
-                }
 
                 // Загружаем 4 значения из матрицы
                 __m256d vals = _mm256_loadu_pd(&values[row][i]);
 
-                // Собираем 4 значения из вектора x
-                __m256d x_vals = _mm256_set_pd(
-                    x[col_indices[row][i + 3]],
-                    x[col_indices[row][i + 2]],
-                    x[col_indices[row][i + 1]],
-                    x[col_indices[row][i]]
-                );
+                // Собираем значения из вектора x по индексам
+                __m256d x_vals = _mm256_i32gather_pd( x.data(), idx, 8);
 
                 // Умножаем и добавляем к аккумулятору
-                local_sum = _mm256_add_pd(local_sum, _mm256_mul_pd(vals, x_vals));
+                local_sum = _mm256_fmadd_pd(vals, x_vals, local_sum);
             }
+
+            // Горизонтальное суммирование аккумулятора
+            __m128d sum128 = _mm_add_pd(_mm256_extractf128_pd(local_sum, 1),
+                _mm256_castpd256_pd128(local_sum));
+            sum128 = _mm_hadd_pd(sum128, sum128);
+            result[row] = _mm_cvtsd_f64(sum128);
 
             // Обрабатываем оставшиеся элементы скалярно
             for (; i < max_non_zero; ++i) {
-                if (col_indices[row][i] == -1) continue;
                 result[row] += values[row][i] * x[col_indices[row][i]];
             }
-
-            // Суммируем аккумулятор и записываем результат
-            double temp[4];
-            _mm256_storeu_pd(temp, local_sum);
-            result[row] += temp[0] + temp[1] + temp[2] + temp[3];
         }
 
         return result;
@@ -293,59 +264,35 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
 #ifdef avx512
         std::vector<double> result(rows, 0.0);
 #ifdef omp
-#pragma omp parallel for schedule(dynamic,1000)
+#pragma omp parallel for schedule(dynamic)
 #endif
         for (int row = 0; row < rows; ++row) {
             __m512d local_sum = _mm512_setzero_pd();  // Инициализируем аккумулятор нулями
 
-            int i = 0;
             // Обрабатываем по 8 элементов за раз (AVX-512 работает с 512-битными регистрами, 8 double)
-            for (; i + 7 < max_non_zero; i += 8) {
+            int k = max_non_zero;
+            int i = 0;
+
+            for (; k > 7 ; k -= 8, i += 8) {
                 // Загружаем 8 индексов столбцов
                 __m256i idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&col_indices[row][i]));
-
-                // Проверяем, есть ли -1 в индексах
-                __mmask8 mask = _mm256_cmpeq_epi32_mask(idx, _mm256_set1_epi32(-1));
-                if (mask != 0) {
-                    // Если есть -1, обрабатываем оставшиеся элементы скалярно
-                    for (int j = i; j < i + 8; ++j) {
-                        if (col_indices[row][j] == -1) continue;
-                        result[row] += values[row][j] * x[col_indices[row][j]];
-                    }
-                    continue;
-                }
-
                 // Загружаем 8 значений из матрицы
                 __m512d vals = _mm512_loadu_pd(&values[row][i]);
 
-                // Собираем 8 значений из вектора x
-                __m512d x_vals = _mm512_set_pd(
-                    x[col_indices[row][i + 7]],
-                    x[col_indices[row][i + 6]],
-                    x[col_indices[row][i + 5]],
-                    x[col_indices[row][i + 4]],
-                    x[col_indices[row][i + 3]],
-                    x[col_indices[row][i + 2]],
-                    x[col_indices[row][i + 1]],
-                    x[col_indices[row][i]]
-                );
+                __m512d x_vals = _mm512_i32gather_pd(idx, x.data(), 8);
 
                 // Умножаем и добавляем к аккумулятору
-                local_sum = _mm512_add_pd(local_sum, _mm512_mul_pd(vals, x_vals));
+                local_sum = _mm512_fmadd_pd(vals, x_vals, local_sum);
             }
-
+            // Суммируем аккумулятор и записываем результат
+            //result[row] = _mm512_reduce_add_pd(local_sum);
+            result[row] += _mm512_reduce_add_pd(local_sum);
             // Обрабатываем оставшиеся элементы скалярно
             for (; i < max_non_zero; ++i) {
-                if (col_indices[row][i] == -1) continue;
                 result[row] += values[row][i] * x[col_indices[row][i]];
             }
 
-            // Суммируем аккумулятор и записываем результат
-            double temp[8];
-            _mm512_storeu_pd(temp, local_sum);
-            result[row] += temp[0] + temp[1] + temp[2] + temp[3] + temp[4] + temp[5] + temp[6] + temp[7];
         }
-
         return result;
 #endif
 }
@@ -369,7 +316,7 @@ SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_s
 
     int num_segments = (rows + segment_size - 1) / segment_size;
     values.resize(num_segments, std::vector<double>(max_non_zero * segment_size, 0.0));
-    col_indices.resize(num_segments, std::vector<int>(max_non_zero * segment_size, -1));
+    col_indices.resize(num_segments, std::vector<int>(max_non_zero * segment_size, 0));
 
     std::vector<int> current_index(rows, 0);
     for (size_t i = 0; i < size; ++i) {
@@ -429,9 +376,6 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
             for (int i = 0; i < segment_max_non_zero; i++) {
                 int index = offset * segment_max_non_zero + i;
                 int temp_col = col_indices[segment][index];
-                if (temp_col == -1) {
-                    continue;
-                }
                 temp_for_row += values[segment][index] * x[col_indices[segment][index]];
             }
             result[row] = temp_for_row;
@@ -459,44 +403,27 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
                 // Загружаем 4 индекса столбцов
                 __m128i col_idx = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&col_indices[segment][offset * segment_max_non_zero + i]));
 
-                // Проверяем, есть ли -1 в индексах
-                __m128i mask = _mm_cmpeq_epi32(col_idx, _mm_set1_epi32(-1));
-                if (_mm_movemask_epi8(mask) != 0) {
-                    // Если есть -1, обрабатываем оставшиеся элементы скалярно
-                    for (int j = i; j < i + 4; j++) {
-                        int temp_col = col_indices[segment][offset * segment_max_non_zero + j];
-                        if (temp_col == -1) continue;
-                        result[row] += values[segment][offset * segment_max_non_zero + j] * x[temp_col];
-                    }
-                    continue;
-                }
-
                 // Загружаем 4 значения из матрицы
                 __m256d mat_vals = _mm256_loadu_pd(&values[segment][offset * segment_max_non_zero + i]);
 
                 // Собираем 4 значения из вектора x
-                __m256d x_vals = _mm256_set_pd(
-                    x[_mm_extract_epi32(col_idx, 3)],
-                    x[_mm_extract_epi32(col_idx, 2)],
-                    x[_mm_extract_epi32(col_idx, 1)],
-                    x[_mm_extract_epi32(col_idx, 0)]
-                );
+                __m256d x_vals = _mm256_i32gather_pd(x.data(), col_idx, 8);
 
                 // Умножаем и добавляем к аккумулятору
-                local_sum = _mm256_add_pd(local_sum, _mm256_mul_pd(mat_vals, x_vals));
+                local_sum = _mm256_fmadd_pd(mat_vals, x_vals, local_sum);
             }
 
             // Обрабатываем оставшиеся элементы скалярно
             for (; i < segment_max_non_zero; i++) {
                 int temp_col = col_indices[segment][offset * segment_max_non_zero + i];
-                if (temp_col == -1) continue;
                 result[row] += values[segment][offset * segment_max_non_zero + i] * x[temp_col];
             }
+            // Горизонтальное суммирование аккумулятора
+            __m128d sum128 = _mm_add_pd(_mm256_extractf128_pd(local_sum, 1),
+                _mm256_castpd256_pd128(local_sum));
+            sum128 = _mm_hadd_pd(sum128, sum128);
+            result[row] = _mm_cvtsd_f64(sum128);
 
-            // Суммируем аккумулятор и записываем результат
-            double temp[4];
-            _mm256_storeu_pd(temp, local_sum);
-            result[row] += temp[0] + temp[1] + temp[2] + temp[3];
         }
     }
     return result;
@@ -521,32 +448,11 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
                 // Загружаем 8 индексов столбцов
                 __m256i col_idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&col_indices[segment][offset * segment_max_non_zero + i]));
 
-                // Проверяем, есть ли -1 в индексах
-                __m256i mask = _mm256_cmpeq_epi32(col_idx, _mm256_set1_epi32(-1));
-                if (_mm256_movemask_epi8(mask) != 0) {
-                    // Если есть -1, обрабатываем оставшиеся элементы скалярно
-                    for (int j = i; j < i + 8; j++) {
-                        int temp_col = col_indices[segment][offset * segment_max_non_zero + j];
-                        if (temp_col == -1) continue;
-                        result[row] += values[segment][offset * segment_max_non_zero + j] * x[temp_col];
-                    }
-                    continue;
-                }
-
                 // Загружаем 8 значений из матрицы
                 __m512d mat_vals = _mm512_loadu_pd(&values[segment][offset * segment_max_non_zero + i]);
 
                 // Собираем 8 значений из вектора x
-                __m512d x_vals = _mm512_set_pd(
-                    x[_mm256_extract_epi32(col_idx, 7)],
-                    x[_mm256_extract_epi32(col_idx, 6)],
-                    x[_mm256_extract_epi32(col_idx, 5)],
-                    x[_mm256_extract_epi32(col_idx, 4)],
-                    x[_mm256_extract_epi32(col_idx, 3)],
-                    x[_mm256_extract_epi32(col_idx, 2)],
-                    x[_mm256_extract_epi32(col_idx, 1)],
-                    x[_mm256_extract_epi32(col_idx, 0)]
-                );
+                __m512d x_vals = _mm512_i32gather_pd(col_idx, x.data(), 8);
 
                 // Умножаем и добавляем к аккумулятору
                 local_sum = _mm512_add_pd(local_sum, _mm512_mul_pd(mat_vals, x_vals));
@@ -555,7 +461,6 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
             // Обрабатываем оставшиеся элементы скалярно
             for (; i < segment_max_non_zero; i++) {
                 int temp_col = col_indices[segment][offset * segment_max_non_zero + i];
-                if (temp_col == -1) continue;
                 result[row] += values[segment][offset * segment_max_non_zero + i] * x[temp_col];
             }
 
@@ -741,64 +646,41 @@ return result;
 #ifdef omp
 #pragma omp parallel for schedule(dynamic)
 #endif
-    for (int segment = 0; segment < num_segments; segment++) {
-        int segment_max_non_zero = values[segment].size() / segment_size;
+for (int segment = 0; segment < num_segments; segment++) {
+    int segment_max_non_zero = values[segment].size() / segment_size;
 
-        for (int offset = 0; offset < segment_size; offset++) {
-            int row = segment * segment_size + offset;
-            if (row >= rows) break;
+    for (int offset = 0; offset < segment_size; offset++) {
+        int row = segment * segment_size + offset;
+        if (row >= rows) break;
 
-            __m512d local_sum = _mm512_setzero_pd(); // Инициализируем аккумулятор нулями
-            int i = 0;
+        __m512d local_sum = _mm512_setzero_pd(); // Инициализируем аккумулятор нулями
+        int i = 0;
 
-            // Обрабатываем по 8 элементов за раз
-            for (; i + 7 < segment_max_non_zero; i += 8) {
-                // Загружаем 8 индексов столбцов
-                __m256i col_idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(
-                    &col_indices[segment][offset * segment_max_non_zero + i]));
+        // Обрабатываем по 8 элементов за раз
+        for (; i + 7 < segment_max_non_zero; i += 8) {
+            // Загружаем 8 индексов столбцов
+            __m256i col_idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&col_indices[segment][offset * segment_max_non_zero + i]));
 
-                // Проверяем, есть ли -1 в индексах
-                __m256i mask = _mm256_cmpeq_epi32(col_idx, _mm256_set1_epi32(-1));
-                if (_mm256_movemask_epi8(mask) != 0) {
-                    // Если есть -1, обрабатываем оставшиеся элементы скалярно
-                    for (int j = i; j < i + 8; j++) {
-                        int temp_col = col_indices[segment][offset * segment_max_non_zero + j];
-                        if (temp_col == -1) continue;
-                        result[row] += values[segment][offset * segment_max_non_zero + j] * x[temp_col];
-                    }
-                    continue;
-                }
+            // Загружаем 8 значений из матрицы
+            __m512d mat_vals = _mm512_loadu_pd(&values[segment][offset * segment_max_non_zero + i]);
 
-                // Загружаем 8 значений из матрицы
-                __m512d mat_vals = _mm512_loadu_pd(&values[segment][offset * segment_max_non_zero + i]);
+            // Собираем 8 значений из вектора x
+            __m512d x_vals = _mm512_i32gather_pd(col_idx, x.data(), 8);
 
-                // Собираем 8 значений из вектора x
-                __m512d x_vals = _mm512_set_pd(
-                    x[_mm256_extract_epi32(col_idx, 7)],
-                    x[_mm256_extract_epi32(col_idx, 6)],
-                    x[_mm256_extract_epi32(col_idx, 5)],
-                    x[_mm256_extract_epi32(col_idx, 4)],
-                    x[_mm256_extract_epi32(col_idx, 3)],
-                    x[_mm256_extract_epi32(col_idx, 2)],
-                    x[_mm256_extract_epi32(col_idx, 1)],
-                    x[_mm256_extract_epi32(col_idx, 0)]
-                );
-
-                // Умножаем и добавляем к аккумулятору
-                local_sum = _mm512_add_pd(local_sum, _mm512_mul_pd(mat_vals, x_vals));
-            }
-
-            // Обрабатываем оставшиеся элементы скалярно
-            for (; i < segment_max_non_zero; i++) {
-                int temp_col = col_indices[segment][offset * segment_max_non_zero + i];
-                if (temp_col == -1) continue;
-                result[row] += values[segment][offset * segment_max_non_zero + i] * x[temp_col];
-            }
-
-            // Суммируем аккумулятор и записываем результат
-            result[row] += _mm512_reduce_add_pd(local_sum);
+            // Умножаем и добавляем к аккумулятору
+            local_sum = _mm512_add_pd(local_sum, _mm512_mul_pd(mat_vals, x_vals));
         }
+
+        // Обрабатываем оставшиеся элементы скалярно
+        for (; i < segment_max_non_zero; i++) {
+            int temp_col = col_indices[segment][offset * segment_max_non_zero + i];
+            result[row] += values[segment][offset * segment_max_non_zero + i] * x[temp_col];
+        }
+
+        // Суммируем аккумулятор и записываем результат
+        result[row] += _mm512_reduce_add_pd(local_sum);
     }
-    return result;
+}
+return result;
     }
 #endif

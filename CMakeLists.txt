@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8.11)
 set(PROJECT_NAME SpMV_project)
 project(${PROJECT_NAME})
 
-set(CMAKE_CXX_COMPILER "/common/software/gcc-9.5.0/bin/g++")
+#set(CMAKE_CXX_COMPILER "/common/software/gcc-9.5.0/bin/g++")
 #set(CMAKE_CXX_COMPILER "C:/msys64/mingw64/bin/g++")
 
 # Добавляем флаг -mavx
