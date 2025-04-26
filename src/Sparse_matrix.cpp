@@ -186,36 +186,34 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
 #pragma omp parallel for schedule(dynamic)
 #endif
         for (int row = 0; row < rows; ++row) {
-            double scalar_sum = 0.0;
+            float64_t scalar_sum = 0.0;
 
-            size_t vlmax = __riscv_vsetvlmax_e64m1();// Устанавливаем максимальную длину для double
+            size_t vlmax = __riscv_vsetvlmax_e64m1();// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ double
 
-            vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax);// Векторный аккумулятор
+            vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax);// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
             int i = 0;
             int k = max_non_zero;
             for (size_t vl; k>0; k-=vl, i += vl) {
                 vl = __riscv_vsetvl_e64m1(k);
 
-                // Загрузка индексов столбцов (32-битные int)
-                vint32m1_t vec_indices = __riscv_vle32_v_i32m1(&col_indices[row][0], vl)
+                // Р—Р°РіСЂСѓР·РєР° РёРЅРґРµРєСЃРѕРІ СЃС‚РѕР»Р±С†РѕРІ (32-Р±РёС‚РЅС‹Рµ int)
+                vuint32m1_t vec_indices = __riscv_vle32_v_u32m1(&col_indices[row][0], vl);
 
-                //загрузка значений вектора
-                vint64m1_t vec_indices_64 = __riscv_vwadd_vx_i64m1(vec_indices, 0, vl);
-                vfloat64m1_t x_vals = __riscv_vluxei64_v_f64m1(x, vec_indices_64, vl);
+                vfloat64m1_t x_vals = __riscv_vluxei64_v_f64m1(&x, vec_indices, vl);
 
-                // Загрузка значений матрицы
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
                 vfloat64m1_t mat_vals = __riscv_vle64_v_f64m1(&values[row][i], vl);
 
-                // Умножение и сложение (FMA)
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (FMA)
                 vec_sum = __riscv_vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
             }
-            scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
-
+            vfloat64m1_t v_reduce_sum = __riscv_vfredosum_vs_f64m1_f64m1(vec_sum,0.0,vlmax);
+            __riscv_vse64_v_f64m1(&scalar_sum,v_reduce_sum,vlmax);
             result[row] = scalar_sum;
         }
 
-        return result;
+        return result;        
 #endif
 }
 
@@ -315,7 +313,7 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
         for (int offset = 0; offset < segment_size; offset++) {
             int row = segment * segment_size + offset;
             if (row >= rows) break;
-            vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax); // Векторный аккумулятор
+            vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
             int i=0;
             int k = segment_max_non_zero;
@@ -324,7 +322,7 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
                 int index = offset * segment_max_non_zero + i;
 
                 vint32m1_t vec_indices = __riscv_vle32_v_i32m1(&col_indices[segment][index], vl);
-                // Преобразование индексов в 64-битные
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ 64-пїЅпїЅпїЅпїЅпїЅпїЅ
                 vint64m1_t vec_indices_64 = __riscv_vwadd_vx_i64m1(vec_indices, 0, vl);
 
                 vfloat64m1_t x_vals = __riscv_vluxei64_v_f64m1(x.data(), vec_indices_64, vl);
@@ -333,7 +331,7 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
                 vec_sum = __riscv_vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
 
             }
-            // Скалярное суммирование оставшихся элементов
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             double scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
             result[row] = scalar_sum;
         }
@@ -457,7 +455,7 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
         for (int offset = 0; offset < segment_size; offset++) {
             int row = segment * segment_size + offset;
             if (row >= rows) break;
-            vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax); // Векторный аккумулятор
+            vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
             int i = 0;
             int k = segment_max_non_zero;
@@ -466,7 +464,7 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
                 int index = offset * segment_max_non_zero + i;
 
                 vint32m1_t vec_indices = __riscv_vle32_v_i32m1(&col_indices[segment][index], vl);
-                // Преобразование индексов в 64-битные
+                // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ 64-пїЅпїЅпїЅпїЅпїЅпїЅ
                 vint64m1_t vec_indices_64 = __riscv_vwadd_vx_i64m1(vec_indices, 0, vl);
 
                 vfloat64m1_t x_vals = __riscv_vluxei64_v_f64m1(x.data(), vec_indices_64, vl);
@@ -475,7 +473,7 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
                 vec_sum = __riscv_vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
 
             }
-            // Скалярное суммирование оставшихся элементов
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             double scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
             result[row] = scalar_sum;
         }
