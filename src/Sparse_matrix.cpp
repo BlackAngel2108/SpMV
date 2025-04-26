@@ -188,9 +188,9 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
         for (int row = 0; row < rows; ++row) {
             float64_t scalar_sum = 0.0;
 
-            size_t vlmax = __riscv_vsetvlmax_e64m1();// ������������� ������������ ����� ��� double
+            size_t vlmax = __riscv_vsetvlmax_e64m1();// вычисление максимального количества элементов double
 
-            vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax);// ��������� �����������
+            vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax);// создание вектора аккумулятора
 
             int i = 0;
             int k = max_non_zero;
@@ -202,10 +202,10 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
 
                 vfloat64m1_t x_vals = __riscv_vluxei64_v_f64m1(&x, vec_indices, vl);
 
-                // �������� �������� �������
+                // загрузка элементов из матрицы
                 vfloat64m1_t mat_vals = __riscv_vle64_v_f64m1(&values[row][i], vl);
 
-                // ��������� � �������� (FMA)
+                // умножение и сложение с накоплением (FMA)
                 vec_sum = __riscv_vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
             }
             vfloat64m1_t v_reduce_sum = __riscv_vfredosum_vs_f64m1_f64m1(vec_sum,0.0,vlmax);
