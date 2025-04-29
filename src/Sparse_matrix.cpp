@@ -335,8 +335,6 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
                 int index = offset * segment_max_non_zero + i;
 
                 vuint32mf2_t vec_indices32 = __riscv_vle32_v_u32mf2(&col_indices[segment][index], vl);
-                // Скорее всего этот код лишний
-                //vuint64m1_t vec_indices_64 = __riscv_vwadd_vx_i64m1(vec_indices32, 0, vl);
 
                 vfloat64m1_t x_vals = __riscv_vluxei32_v_f64m1(x.data(), vec_indices32, vl);
 
@@ -482,8 +480,6 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
                 int index = offset * segment_max_non_zero + i;
 
                 vuint32mf2_t vec_indices32 = __riscv_vle32_v_u32mf2(&col_indices[segment][index], vl);
-                // Скорее всего этот код лишний
-                //vint64m1_t vec_indices_64 = __riscv_vwadd_vx_i64m1(vec_indices, 0, vl);
 
                 vfloat64m1_t x_vals = __riscv_vluxei32_v_f64m1(x.data(), vec_indices32, vl);
 
