@@ -12,7 +12,7 @@
 #define risc
 //#define simple
 //#define omp
-#ifdef ricv
+#ifdef risc
 #include <riscv_vector.h>
 #endif
 
@@ -65,7 +65,7 @@ public:
 class ELLPack_matrix : public Sparse_matrix {
 private:
     std::vector<std::vector<double>> values;      // Array of non-zero element values
-    std::vector<std::vector<int>> col_indices;    // Array of column indices
+    std::vector<std::vector<unsigned int>> col_indices;    // Array of column indices
     int max_non_zero;                             // Maximum number of non-zero elements per row
 
 public:
@@ -76,7 +76,7 @@ public:
 class SELL_C_matrix : public Sparse_matrix {
 private:
     std::vector<std::vector<double>> values;      // Array of non-zero element values
-    std::vector<std::vector<int>> col_indices;    // Array of column indices
+    std::vector<std::vector<unsigned int>> col_indices;    // Array of column indices
     std::vector<int> row_pointers;                // Segment start pointers
     int segment_size;                             // Segment size
     int max_non_zero;                             // Maximum number of non-zero elements per row
@@ -89,7 +89,7 @@ public:
 class SELL_C_sigma_matrix : public Sparse_matrix {
 private:
     std::vector<std::vector<double>> values;      // Array of non-zero element values
-    std::vector<std::vector<int>> col_indices;    // Array of column indices
+    std::vector<std::vector<unsigned int>> col_indices;    // Array of column indices
     std::vector<int> row_pointers;                // Row start pointers
     int segment_size;                             // Segment size
     int max_non_zero;                             // Maximum number of non-zero elements per row
