@@ -190,12 +190,12 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
         // вычисление максимального количества элементов double
         size_t vlmax = __riscv_vsetvlmax_e64m1();
 
-        // вектор с нулями
-        vfloat64m1_t v_zero = __riscv_vfmv_v_f_f64m1(0.0, vlmax);
-#ifdef omp
-#pragma omp parallel for schedule(dynamic)
-#endif
+        #ifdef omp
+        #pragma omp parallel for schedule(dynamic)
+        #endif
         for (int row = 0; row < rows; ++row) {
+            // вектор с нулями
+            vfloat64m1_t v_zero = __riscv_vfmv_v_f_f64m1(0.0, vlmax);
             
             double scalar_sum = 0.0;
 
