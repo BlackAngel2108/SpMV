@@ -2,7 +2,7 @@
 #include "Sparse_matrix.h"
 #include <stdio.h> 
 #include <time.h> 
-
+#define TEST_MATRIX "./bin_matrix/bcsstk14.bin"
 
 //TEST(Lpack_Sparse_matrix, test_can_read_bin_LPack) {
 //
@@ -18,7 +18,7 @@
 //    ASSERT_NO_THROW(b = mat.SpMV(b));
 //}
 TEST(ELLpack_Sparse_matrix, test_can_multiply_eLPack_time) {
-    std::string path("../../bin_matrix/S80PI_n1.bin");
+    std::string path(TEST_MATRIX);
     ELLPack_matrix mat(path);
     int size = mat.get_cols();
     std::vector<double> b(size, 1);

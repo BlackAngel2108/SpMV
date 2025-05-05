@@ -2,8 +2,13 @@
 
 COO_matrix::COO_matrix(std::string filename) {
     std::ifstream infile(filename, std::ios::binary);
-    if (!infile.is_open()) {
-        std::cerr << "Error opening file for reading: " << filename << std::endl;
+    try {
+        if (!infile.is_open()) {
+            throw std::runtime_error("Error opening file for reading: " + filename);
+        }
+    } 
+    catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
         return;
     }
 
@@ -148,7 +153,7 @@ ELLPack_matrix::ELLPack_matrix(std::string filename) {
     max_non_zero = *std::max_element(row_counts.begin(), row_counts.end());
 
     values.resize(rows, std::vector<double>(max_non_zero, 0.0));
-    col_indices.resize(rows, std::vector<unsigned int>(max_non_zero, -1));
+    col_indices.resize(rows, std::vector<uint32_t>(max_non_zero, 0));
 
     std::vector<int> current_index(rows, 0);
     for (size_t i = 0; i < size; ++i) {
@@ -182,14 +187,14 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
 #endif
 #ifdef risc
         std::vector<double> result(rows, 0.0);
+        // вычисление максимального количества элементов double
+        size_t vlmax = __riscv_vsetvlmax_e64m1();
+
+        // вектор с нулями
+        vfloat64m1_t v_zero = __riscv_vfmv_v_f_f64m1(0.0, vlmax);
 #ifdef omp
 #pragma omp parallel for schedule(dynamic)
 #endif
-        // вычисление максимального количества элементов double
-        size_t vlmax = __riscv_vsetvlmax_e64m1();
-        // вектор с нулями
-        vfloat64m1_t v_zero = __riscv_vfmv_v_f_f64m1(0.0, vlmax);
-
         for (int row = 0; row < rows; ++row) {
             
             double scalar_sum = 0.0;
@@ -203,8 +208,9 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
                 vl = __riscv_vsetvl_e64m1(k);
 
                 // загрузка индексов столбцов (32-битные unsigned int), грузим в половину вектора
-                vuint32mf2_t vec_indices = __riscv_vle32_v_u32mf2(&col_indices[row][0], vl);
-                
+                vuint32mf2_t vec_indices = __riscv_vle32_v_u32mf2(&col_indices[row][i], vl);
+                vec_indices = __riscv_vsll_vx_u32mf2(vec_indices, 3 , vl);
+
                 // загрузка x_val элементов по индексам
                 vfloat64m1_t x_vals = __riscv_vluxei32_v_f64m1(&x[0], vec_indices, vl);
 
@@ -215,7 +221,7 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
                 vec_sum = __riscv_vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
             }
             // сложение всех элементов вектора
-            vfloat64m1_t v_reduce_sum = __riscv_vfredosum_vs_f64m1_f64m1(vec_sum, v_zero, vlmax);
+            vfloat64m1_t v_reduce_sum = __riscv_vfredusum_vs_f64m1_f64m1(vec_sum, v_zero, vlmax);
             // Выгрузка значения из вектора v_reduce_sum в переменную scalar_sum
             __riscv_vse64_v_f64m1(&scalar_sum, v_reduce_sum, vlmax);
             result[row] = scalar_sum;
@@ -244,7 +250,7 @@ SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_s
 
     int num_segments = (rows + segment_size - 1) / segment_size;
     values.resize(num_segments, std::vector<double>(max_non_zero * segment_size, 0.0));
-    col_indices.resize(num_segments, std::vector<unsigned int>(max_non_zero * segment_size, -1));
+    col_indices.resize(num_segments, std::vector<unsigned int>(max_non_zero * segment_size, 0));
 
     std::vector<int> current_index(rows, 0);
     for (size_t i = 0; i < size; ++i) {
@@ -327,7 +333,9 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
 
             // создание вектора аккумулятора
             vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax);
-
+                    // вектор с нулями
+            vfloat64m1_t v_zero = __riscv_vfmv_v_f_f64m1(0.0, vlmax);
+            double scalar_sum = 0.0;
             int i=0;
             int k = segment_max_non_zero;
             for (size_t vl; k > 0; k -= vl, i += vl) {
@@ -335,20 +343,26 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
                 int index = offset * segment_max_non_zero + i;
 
                 vuint32mf2_t vec_indices32 = __riscv_vle32_v_u32mf2(&col_indices[segment][index], vl);
-
-                vfloat64m1_t x_vals = __riscv_vluxei32_v_f64m1(x.data(), vec_indices32, vl);
+                vec_indices32 = __riscv_vsll_vx_u32mf2(vec_indices32, 3 , vl);
+                vfloat64m1_t x_vals = __riscv_vluxei32_v_f64m1(&x[0], vec_indices32, vl);
 
                 vfloat64m1_t mat_vals = __riscv_vle64_v_f64m1(&values[segment][index], vl);
                 vec_sum = __riscv_vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
 
+                
             }
-            // Переводим значение [0] вектора суммы в скалярную величину
-            double scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
+            // сложение всех элементов вектора
+            vfloat64m1_t v_reduce_sum = __riscv_vfredusum_vs_f64m1_f64m1(vec_sum, v_zero, vlmax);
+            // Выгрузка значения из вектора v_reduce_sum в переменную scalar_sum
+            __riscv_vse64_v_f64m1(&scalar_sum, v_reduce_sum, vlmax);
             result[row] = scalar_sum;
+            // // Переводим значение [0] вектора суммы в скалярную величину
+            // double scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
+            // result[row] = scalar_sum;
         }
     }
     return result;
-    }
+}
 #endif
 
 
@@ -406,7 +420,7 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
         }
 
         values[segment].resize(static_cast<size_t>(segment_size) * static_cast<size_t>(segment_max_non_zero[segment]), 0.0);
-        col_indices[segment].resize(static_cast<size_t>(segment_size) * static_cast<size_t>(segment_max_non_zero[segment]), -1);
+        col_indices[segment].resize(static_cast<size_t>(segment_size) * static_cast<size_t>(segment_max_non_zero[segment]), 0);
     }
 
     std::vector<int> current_index(rows, 0);
@@ -470,28 +484,36 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
             // вычисление максимального количества элементов double
             size_t vlmax = __riscv_vsetvlmax_e64m1();
 
-            // Создание вектора аккумулятора и заполнение нулями
+            // создание вектора аккумулятора
             vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax);
-
-            int i = 0;
+                    // вектор с нулями
+            vfloat64m1_t v_zero = __riscv_vfmv_v_f_f64m1(0.0, vlmax);
+            double scalar_sum = 0.0;
+            int i=0;
             int k = segment_max_non_zero;
             for (size_t vl; k > 0; k -= vl, i += vl) {
                 vl = __riscv_vsetvl_e64m1(k);
                 int index = offset * segment_max_non_zero + i;
 
                 vuint32mf2_t vec_indices32 = __riscv_vle32_v_u32mf2(&col_indices[segment][index], vl);
-
-                vfloat64m1_t x_vals = __riscv_vluxei32_v_f64m1(x.data(), vec_indices32, vl);
+                vec_indices32 = __riscv_vsll_vx_u32mf2(vec_indices32, 3 , vl);
+                vfloat64m1_t x_vals = __riscv_vluxei32_v_f64m1(&x[0], vec_indices32, vl);
 
                 vfloat64m1_t mat_vals = __riscv_vle64_v_f64m1(&values[segment][index], vl);
                 vec_sum = __riscv_vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
 
+                
             }
-            // Переводим значение [0] вектора суммы в скалярную величину
-            double scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
+            // сложение всех элементов вектора
+            vfloat64m1_t v_reduce_sum = __riscv_vfredusum_vs_f64m1_f64m1(vec_sum, v_zero, vlmax);
+            // Выгрузка значения из вектора v_reduce_sum в переменную scalar_sum
+            __riscv_vse64_v_f64m1(&scalar_sum, v_reduce_sum, vlmax);
             result[row] = scalar_sum;
+            // // Переводим значение [0] вектора суммы в скалярную величину
+            // double scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
+            // result[row] = scalar_sum;
         }
     }
-return result;
+    return result;
 }
 #endif

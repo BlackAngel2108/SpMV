@@ -2,7 +2,8 @@ message(STATUS "Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
 
 # defines
 add_definitions("-Driscv")
-
+# Добавляем флаг оптимизации
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 # указываем компилятор
 set(PRJ_COMPILER_PATH "/home/luba/tools/riscv_gcc/bin")
 set(CMAKE_CXX_COMPILER "${PRJ_COMPILER_PATH}/riscv64-unknown-linux-gnu-g++")

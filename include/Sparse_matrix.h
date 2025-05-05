@@ -8,6 +8,7 @@
 #include <map>
 #include <algorithm>
 #include <omp.h>
+#include <filesystem>
 
 #define risc
 //#define simple
@@ -65,7 +66,7 @@ public:
 class ELLPack_matrix : public Sparse_matrix {
 private:
     std::vector<std::vector<double>> values;      // Array of non-zero element values
-    std::vector<std::vector<unsigned int>> col_indices;    // Array of column indices
+    std::vector<std::vector<uint32_t>> col_indices;    // Array of column indices
     int max_non_zero;                             // Maximum number of non-zero elements per row
 
 public:
