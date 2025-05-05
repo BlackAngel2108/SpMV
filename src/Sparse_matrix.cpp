@@ -1,7 +1,7 @@
 #include "Sparse_matrix.h"
 
 COO_matrix::COO_matrix(std::string filename) {
-    std::ifstream infile(filename, std::ios::binary | std::ios::in);
+    std::ifstream infile(filename, std::ios::binary);
     if (!infile.is_open()) {
         std::cerr << "Error opening file for reading: " << filename << std::endl;
         return;
