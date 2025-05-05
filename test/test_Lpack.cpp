@@ -17,7 +17,7 @@
 //    std::vector<double> ans(size);
 //    ASSERT_NO_THROW(b = mat.SpMV(b));
 //}
-TEST(ELLpack_Sparse_matrix, test_can_multiply_eLPack_time) {
+TEST(ELLpack_Sparse_matrix, test_can_multiply_ELLPack_time) {
     std::string path(TEST_MATRIX);
     ELLPack_matrix mat(path);
     int size = mat.get_cols();
