@@ -1,0 +1,11 @@
+Matrix ash958 already processed. Skipping.
+Matrix StocF-1465 already processed. Skipping.
+Matrix S80PI_n1 already processed. Skipping.
+Matrix road_usa already processed. Skipping.
+Matrix kmer_V2a already processed. Skipping.
+Reading file: ../../bin_matrix/nlpkkt240.bin
+    COO_matrix: ../../bin_matrix/nlpkkt240.bin
+    CSR_matrix: ../../bin_matrix/nlpkkt240.bin
+slurmstepd: error: *** STEP 167493.0 ON node3 CANCELLED AT 2025-05-14T23:29:27 ***
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** JOB 167493 ON node3 CANCELLED AT 2025-05-14T23:29:27 ***

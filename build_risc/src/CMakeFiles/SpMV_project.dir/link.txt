@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../lib/libSpMV_project.a CMakeFiles/SpMV_project.dir/Sparse_matrix.cpp.o
+/usr/bin/ranlib ../lib/libSpMV_project.a

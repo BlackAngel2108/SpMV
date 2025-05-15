@@ -1,0 +1,1 @@
+/common/software/gcc-riscv64-14.2.0/bin/riscv64-unknown-linux-gnu-g++ -march=rv64gcv -mabi=lp64d -O3 -fopenmp -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/matrix_to_bin.dir/link.d CMakeFiles/matrix_to_bin.dir/matrix_to_bin.cpp.o -o ../bin/matrix_to_bin  ../lib/libSpMV_project.a

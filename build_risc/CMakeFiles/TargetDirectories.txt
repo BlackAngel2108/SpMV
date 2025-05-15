@@ -1,0 +1,17 @@
+/home/sobol_l/projects/SpMV/build_risc/CMakeFiles/edit_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/CMakeFiles/rebuild_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/src/CMakeFiles/SpMV_project.dir
+/home/sobol_l/projects/SpMV/build_risc/src/CMakeFiles/edit_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/src/CMakeFiles/rebuild_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/samples/CMakeFiles/sample_spmv.dir
+/home/sobol_l/projects/SpMV/build_risc/samples/CMakeFiles/edit_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/samples/CMakeFiles/rebuild_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/matrix_binary_library/CMakeFiles/matrix_to_bin.dir
+/home/sobol_l/projects/SpMV/build_risc/matrix_binary_library/CMakeFiles/edit_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/matrix_binary_library/CMakeFiles/rebuild_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/gtest/CMakeFiles/gtest.dir
+/home/sobol_l/projects/SpMV/build_risc/gtest/CMakeFiles/edit_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/gtest/CMakeFiles/rebuild_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/test/CMakeFiles/test_SpMV_project.dir
+/home/sobol_l/projects/SpMV/build_risc/test/CMakeFiles/edit_cache.dir
+/home/sobol_l/projects/SpMV/build_risc/test/CMakeFiles/rebuild_cache.dir
