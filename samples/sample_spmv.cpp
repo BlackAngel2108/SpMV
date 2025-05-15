@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
     else {
         // Create a new file and write the header
         outfile.open(output_file);
-        outfile << "Matrix," << "COO_time," << " CSR_time," << " DIAG_time," << " EELPack_time," << "SELL_C_time," << "SELL_C_sigma_time," << std::endl;
+        outfile << "Matrix," << "COO_time," << " CSR_time," << " DIAG_time," << " ELLPack_time," << "SELL_C_time," << "SELL_C_sigma_time," << std::endl;
     }
 
     if (!outfile.is_open()) {
@@ -158,19 +158,19 @@ int main(int argc, char* argv[]) {
 
             double t4 = 0;
             try {
-                std::cout << "   ELPack_matrix: " << filename << std::endl;
+                std::cout << "   ELLPack_matrix: " << filename << std::endl;
                 ELLPack_matrix Ellpack_matrix(filename);
                 t4 = SPMV_time(ans, Ellpack_matrix, b);
             }
             catch (...) {
                 t4 = 0;
-                std::cout << "ELPACK ERROR: " << std::endl;
+                std::cout << "ELLPACK ERROR: " << std::endl;
             }
 
             double t5 = 0;
             try {
                 std::cout << "    SELL_C_matrix: " << filename << std::endl;
-                SELL_C_matrix sell_c_matrix(filename, 4);
+                SELL_C_matrix sell_c_matrix(filename, 16);
                 t5 = SPMV_time(ans, sell_c_matrix, b);
             }
             catch (...) {
@@ -179,6 +179,15 @@ int main(int argc, char* argv[]) {
             }
 
             double t6 = 0;
+            try {
+                std::cout << "    SELL_C_sigma_matrix: " << filename << std::endl;
+                SELL_C_sigma_matrix sell_c_sigma_matrix(filename, 16,1024);
+                t6 = SPMV_time(ans, sell_c_sigma_matrix, b);
+            }
+            catch (...) {
+                t6 = 0;
+                std::cout << "SELL_C_sigma ERROR: " << std::endl;
+            }
 
             outfile << base_name << ", " << t1 << ", " << t2 << ", " << t3 << "," << t4 << ", " << t5 << ", " << t6 << std::endl;
         }
