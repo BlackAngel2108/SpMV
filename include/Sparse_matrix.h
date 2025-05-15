@@ -9,13 +9,13 @@
 #include <algorithm>
 #include <omp.h>
 
-#define avx512
 //#define avx512
-//#define simple
-//#define omp
+//#define risc
+#define simple
+#define omp
 
 #include <immintrin.h>
-
+//#include <riscv-vector.h>
 
 class Sparse_matrix {
 protected:

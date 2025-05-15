@@ -277,8 +277,10 @@ TEST(Sparse_matrix, right_mult_coo_eelpack) {
     b2 = mat2.SpMV(b2);
     int flag = 0;
     for (int i = 0; i < size2; i++) {
-        if (b[i] != b2[i])
+    //printf("wrong index %i value %f, right %f\n",i,b2[i],  b[i]);
+        if (b[i] != b2[i]){
             flag = 1;
+        }    
     }
     EXPECT_EQ(flag, 0);
 }

@@ -100,7 +100,7 @@ std::vector<MatrixElement> readMatrixFromBinaryCOO(const std::string& filename, 
 int main() {
     std::string matrix_folder = "../../matrix";
     std::string bin_folder = "../../bin_matrix";
-
+/*
     if (!fs::exists(matrix_folder) || !fs::is_directory(matrix_folder)) {
         std::cerr << "Error: folder " << matrix_folder << " does not exist or is not a directory." << std::endl;
         return 1;
@@ -121,19 +121,22 @@ int main() {
             if (fs::exists(bin_filename) || fs::exists(bin_filename2)) {
                 std::cout << "File " << bin_filename << " already exists. Skipping creation." << std::endl;
                 continue;
-            }
+            }*/
             int rows = 0, cols = 0;
-            std::vector<MatrixElement> matrix = readMatrixFromMTX(mtx_filename, rows, cols);
+            std::string name_matrix="nlpkkt240.mtx";
+	    std::string path = "../../matrix/"+name_matrix;
+	    std::string bin_path = bin_folder + "/" +name_matrix + ".bin";
+            std::vector<MatrixElement> matrix = readMatrixFromMTX(path, rows, cols);
             if (matrix.empty()) {
-                std::cerr << "Error: failed to read matrix from file " << mtx_filename << std::endl;
-                continue;
+                //std::cerr << "Error: failed to read matrix from file " << mtx_filename << std::endl;
+                //continue;
             }
 
-            std::cout << "Converting to COO format and writing to binary file: " << bin_filename << std::endl;
-
-            writeMatrixToBinaryCOO(bin_filename, matrix, rows, cols);
-        }
-    }
+            //std::cout << "Converting to COO format and writing to binary file: " << bin_filename << std::endl;
+	    //std::string bin_real = "../../bin_matrix/ash958_temp.bin";
+            writeMatrixToBinaryCOO(bin_path, matrix, rows, cols);
+//        }
+//    }
 
     std::cout << "Processing complete." << std::endl;
     return 0;

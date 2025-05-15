@@ -1,24 +1,33 @@
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.10)
 
 set(PROJECT_NAME SpMV_project)
 project(${PROJECT_NAME})
 
-set(CMAKE_CXX_COMPILER "/common/software/gcc-9.5.0/bin/g++")
+#set(CMAKE_CXX_COMPILER "/common/software/gcc-9.5.0/bin/g++")
 #set(CMAKE_CXX_COMPILER "C:/msys64/mingw64/bin/g++")
 
 # Добавляем флаг -mavx
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512dq")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512dq")
 
-find_package(OpenMP REQUIRED)
-
-if(OPENMP_FOUND)
-    message( STATUS "OpenMP_found")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+if(COMPILER_SUPPORTS_CXX17)
+    message( STATUS "CXX17_supported")
 endif()
+#find_package(OpenMP REQUIRED)
+find_package(OpenMP REQUIRED)
+if(OpenMP_CXX_FOUND)
+    message(STATUS "OpenMP C++ FOUND - ${OpenMP_CXX_VERSION}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+        else()
+            message(WARNING "OpenMP NOT found")
+endif()
+#if(OPENMP_FOUND)
+#    message( STATUS "OpenMP_found")
+#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")  #${OpenMP_CXX_FLAGS}")
+    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+#endif()
 
 # TODO(Kornyakov): not sure if these lines are needed
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
