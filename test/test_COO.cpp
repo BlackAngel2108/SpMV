@@ -3,7 +3,7 @@
 #include <stdio.h> 
 #include <time.h> 
 #include <chrono>
-#define TEST_MATRIX "./bin_matrix/ash958.bin"
+#define TEST_MATRIX "../../bin_matrix/ash958.bin"
 
 TEST(Sparse_matrix, can_read_bin_coo) {
     std::string path2(TEST_MATRIX);

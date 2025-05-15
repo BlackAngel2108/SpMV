@@ -2,7 +2,7 @@
 #include "Sparse_matrix.h"
 #include <stdio.h> 
 #include <time.h> 
-#define TEST_MATRIX "./bin_matrix/bcsstk14.bin"
+#define TEST_MATRIX "../../bin_matrix/bcsstk14.bin"
 
 //TEST(Lpack_Sparse_matrix, test_can_read_bin_LPack) {
 //
