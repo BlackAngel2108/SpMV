@@ -3,8 +3,8 @@
 #include <stdio.h> 
 #include <time.h> 
 #include <chrono>
-#define TEST_MATRIX "./bin_matrix/ash958.bin"
-
+//#define TEST_MATRIX "./bin_matrix/ash958.bin"
+#define TEST_MATRIX "../../bin_matrix/ash958.bin"
 TEST(Sparse_matrix, can_read_bin_coo) {
     std::string path2(TEST_MATRIX);
     ASSERT_NO_THROW(COO_matrix mat(path2));
@@ -215,10 +215,9 @@ TEST(Sparse_matrix, can_multiply_SELL_C_sigma_time) {
     b = mat.SpMV(b);
     auto end = std::chrono::high_resolution_clock::now();
 
-    // ���������� �����������������
     std::chrono::duration<double> elapsed = end - start;
 
-    // ����� ������� ����������
+
     ASSERT_NO_THROW(printf("The time of SELL_c_sigma: %f seconds\n", elapsed.count()););
 }
 
