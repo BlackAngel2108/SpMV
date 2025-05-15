@@ -10,10 +10,10 @@
 #include <omp.h>
 #include <filesystem>
 
-#define riscLMUL2
+#define risc
 //#define simple
-#define omp
-#if defined(risc) || defined(riscLMUL2) || defined(riscLMUL4) || defined(riscLMUL8)
+//#define omp
+#ifdef risc
 #include <riscv_vector.h>
 #endif
 

@@ -2,8 +2,8 @@
 #include "Sparse_matrix.h"
 #include <stdio.h> 
 #include <time.h> 
-//#define TEST_MATRIX "./bin_matrix/494_bus.bin"
-#define TEST_MATRIX "../../bin_matrix/494_bus.bin"
+#define TEST_MATRIX "./bin_matrix/bcsstk14.bin"
+
 //TEST(Lpack_Sparse_matrix, test_can_read_bin_LPack) {
 //
 //    std::string path2("../../bin_matrix/ash958.bin");
@@ -23,13 +23,12 @@ TEST(ELLpack_Sparse_matrix, test_can_multiply_ELLPack_time) {
     int size = mat.get_cols();
     std::vector<double> b(size, 1);
     std::vector<double> ans(size);
-    auto start = std::chrono::high_resolution_clock::now();
+    double startTime, endTime;
+    startTime = clock();
     b = mat.SpMV(b);
-    auto end = std::chrono::high_resolution_clock::now();
-
-    std::chrono::duration<double> elapsed = end - start;
-
-    ASSERT_NO_THROW(printf("The time: %f seconds\n", elapsed.count()););
+    endTime = clock();
+    double seconds = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+    ASSERT_NO_THROW(printf("The time: %f seconds\n", seconds););
 }
 // TEST(Lpack_Sparse_matrix, test_can_multiply_LPack_time_big) {
 //     std::string path("../../bin_matrix/atmosmodm.bin");
