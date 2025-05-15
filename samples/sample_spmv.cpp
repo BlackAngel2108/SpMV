@@ -50,23 +50,22 @@ int main(int argc, char* argv[]) {
     int target_file;
 
     // Check if command line arguments are provided
-    if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <number_of_files_to_skip> <target_file_number> <name_of_result_file>" << std::endl;
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <number_of_files_to_skip> <target_file_number>" << std::endl;
         return 1;
     }
     skip_files = std::stoi(argv[1]);
     target_file = std::stoi(argv[2]);
-    std::string name_of_result_file = (argv[3]);
 
     // Parallel block for testing
 #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();
-        //std::cout << "Hello from thread " << thread_id << std::endl;
+        std::cout << "Hello from thread " << thread_id << std::endl;
     }
 
     std::string bin_folder = "../../bin_matrix";
-    std::string output_file = "../../results/results" + name_of_result_file + ".csv";    // Output file name
+    std::string output_file = "../../results.csv";    // Output file name
 
     // Check if the file results.csv exists
     bool file_exists = fs::exists(output_file);
@@ -79,7 +78,7 @@ int main(int argc, char* argv[]) {
     else {
         // Create a new file and write the header
         outfile.open(output_file);
-        outfile << "Matrix," << "COO_time," << " CSR_time," << " DIAG_time," << " ELLPack_time," << "SELL_C_time," << "SELL_C_sigma_time," << std::endl;
+        outfile << "Matrix," << "COO_time," << " CSR_time," << " DIAG_time," << " EELPack_time," << "SELL_C_time," << "SELL_C_sigma_time," << std::endl;
     }
 
     if (!outfile.is_open()) {
@@ -159,37 +158,27 @@ int main(int argc, char* argv[]) {
 
             double t4 = 0;
             try {
-                std::cout << "   ELLPack_matrix: " << filename << std::endl;
+                std::cout << "   ELPack_matrix: " << filename << std::endl;
                 ELLPack_matrix Ellpack_matrix(filename);
                 t4 = SPMV_time(ans, Ellpack_matrix, b);
             }
             catch (...) {
                 t4 = 0;
-                std::cout << "ELLPACK ERROR: " << std::endl;
+                std::cout << "ELPACK ERROR: " << std::endl;
             }
 
             double t5 = 0;
             try {
                 std::cout << "    SELL_C_matrix: " << filename << std::endl;
-                SELL_C_matrix sell_c_matrix(filename, 16);
+                SELL_C_matrix sell_c_matrix(filename, 4);
                 t5 = SPMV_time(ans, sell_c_matrix, b);
             }
             catch (...) {
                 t5 = 0;
                 std::cout << "SELL_C ERROR: " << std::endl;
             }
-            
-            double t6 = 0;
-            try {
-                std::cout << "    SELL_C_sigma_matrix: " << filename << std::endl;
-                SELL_C_sigma_matrix sell_c_sigma_matrix(filename, 16, 1024);
-                t6 = SPMV_time(ans, sell_c_sigma_matrix, b);
-            }
-            catch (...) {
-                t6 = 0;
-                std::cout << "SELL_C_sigma ERROR: " << std::endl;
-            }
 
+            double t6 = 0;
 
             outfile << base_name << ", " << t1 << ", " << t2 << ", " << t3 << "," << t4 << ", " << t5 << ", " << t6 << std::endl;
         }
