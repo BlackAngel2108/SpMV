@@ -1,0 +1,9 @@
+diff a/.gitignore b/.gitignore	(rejected hunks)
+@@ -4,6 +4,7 @@
+ ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
+ 
+ build
++build-riscv
+ build2
+ matrix
+ bin_matrix
