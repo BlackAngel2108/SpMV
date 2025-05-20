@@ -9,8 +9,8 @@
 #include <algorithm>
 #include <omp.h>
 
-#define avx512
-//#define risc
+//#define avx512
+#define risc
 //#define simple
 #define omp
 //#define avx2
@@ -96,6 +96,7 @@ private:
     std::vector<std::vector<double>> values;      // Array of non-zero element values
     std::vector<std::vector<int>> col_indices;    // Array of column indices
     std::vector<int> row_pointers;                // Row start pointers
+    std::vector<int> sorted_to_row_index;
     int segment_size;                             // Segment size
     int max_non_zero;                             // Maximum number of non-zero elements per row
     int sigma;                                    // Number of non-zero elements per row in a segment
