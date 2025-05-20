@@ -112,7 +112,7 @@ TEST(TIME, test_StocF_1465) {
 /*
 TEST(TIME, test_rajat31) {
     std::string path("../../bin_matrix/rajat31.bin");
-<<<<<<< HEAD
+
     double t1 = 0.0;
     double t6 = 0.0;
     try {
@@ -138,7 +138,7 @@ TEST(TIME, test_rajat31) {
 	std::cout<<"Ellpack erro"<<std::endl;
     }
     ASSERT_NO_THROW(std::cout << path << "\n";);
-}*/
+}
 TEST(TIME, test_road_usa) {
     std::string path("../../bin_matrix/road_usa.bin");
     test_all(path);
@@ -149,21 +149,13 @@ TEST(TIME, test_kmer_V2a) {
     std::string path("../../bin_matrix/kmer_V2a.bin");
     test_all(path);
     ASSERT_NO_THROW(std::cout << path << "\n";);
-}
+}*/
 TEST(TIME, test_nlpkkt240) {
     std::string path("../../bin_matrix/nlpkkt240.bin");
     test_all(path);
-=======
-    test_all(path);
-    ASSERT_NO_THROW(std::cout << path << "\n";);
-}*/
-
-TEST(TIME, test_road_usa) {
-    std::string path("../../bin_matrix/road_usa.bin");
-    test_all(path);
->>>>>>> 21013552172f6d2cc2ce8d91451ef2856b999e37
     ASSERT_NO_THROW(std::cout << path << "\n";);
 }
+
 // TEST(Lpack_Sparse_matrix, test_can_multiply_LPack_time_big) {
 //     std::string path("../../bin_matrix/atmosmodm.bin");
 //     LPack_matrix mat(path);

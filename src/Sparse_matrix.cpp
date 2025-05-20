@@ -212,7 +212,7 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
   //omp_set_num_threads(4);
 #ifdef omp 
-#pragma omp parallel for schedule(dynamic,1000)
+#pragma omp parallel for schedule(dynamic, 1000)
 #endif
     for (int row = 0; row < rows; ++row) {
     double local_sum =0;
@@ -269,7 +269,7 @@ for (int row = 0; row < rows; ++row) {
 #ifdef avx512
 std::vector<double> result(rows, 0.0);
 #ifdef omp
-#pragma omp parallel for schedule (dynamic)
+#pragma omp parallel for schedule (dynamic, 1000)
 #endif
 for (int row = 0; row < rows; ++row) {
         __m512d local_sum = _mm512_setzero_pd();  // Инициализируем аккумулятор нулями
@@ -474,7 +474,7 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
 #endif
 #ifdef avx512
 #ifdef omp
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic, 1000)
 #endif
 for (int segment = 0; segment < num_segments; segment++) {
     int segment_max_non_zero = values[segment].size() / segment_size;
@@ -711,7 +711,7 @@ return result;
 #endif
 #ifdef avx512
 #ifdef omp
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic, 1000)
 #endif
 for (int segment = 0; segment < num_segments; segment++) {
         int segment_max_non_zero = values[segment].size() / segment_size;

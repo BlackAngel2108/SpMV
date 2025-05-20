@@ -9,16 +9,14 @@
 #include <algorithm>
 #include <omp.h>
 
-//#define avx512
-<<<<<<< HEAD
+#define avx512
 //#define risc
-#define simple
+//#define simple
 #define omp
-=======
 //#define avx2
-#define simple
+//#define simple
 //#define omp
->>>>>>> 21013552172f6d2cc2ce8d91451ef2856b999e37
+
 
 #include <immintrin.h>
 //#include <riscv-vector.h>
