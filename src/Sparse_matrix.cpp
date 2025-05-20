@@ -669,6 +669,10 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
     for (int i = 0; i < rows; ++i) {
         row_to_sorted_index[row_order[i]] = i;
     }
+    sorted_to_row_index.resize(rows);
+    for (int i = 0; i < rows; ++i) {
+        sorted_to_row_index[row_to_sorted_index[i]] = i;
+    }
 
     int num_segments = (rows + segment_size - 1) / segment_size;
 
@@ -733,7 +737,9 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
                 int index = offset * segment_max_non_zero + i;
                 temp_for_row += values[segment][index] * x[col_indices[segment][index]];
             }
-            result[row] = temp_for_row;
+            // Use mapping from sorted_row back to original row index
+            int original_row = sorted_to_row_index[row];
+            result[original_row] = temp_for_row;
         }
     }
     return result;

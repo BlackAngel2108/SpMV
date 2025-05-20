@@ -107,10 +107,8 @@ TEST(Sparse_matrix, can_multiply_csr_time) {
     b = mat.SpMV(b);
     auto end = std::chrono::high_resolution_clock::now();
 
-    // ���������� �����������������
     std::chrono::duration<double> elapsed = end - start;
 
-    // ����� ������� ����������
     ASSERT_NO_THROW(printf("The time of SCR: %f seconds\n", elapsed.count()););
 }
 ///
@@ -147,10 +145,8 @@ TEST(Sparse_matrix, can_multiply_EELPack_time) {
     b = mat.SpMV(b);
     auto end = std::chrono::high_resolution_clock::now();
 
-    // ���������� �����������������
     std::chrono::duration<double> elapsed = end - start;
 
-    // ����� ������� ����������
     ASSERT_NO_THROW(printf("The time of ELLpack: %f seconds\n", elapsed.count()););
 }
 
@@ -183,10 +179,8 @@ TEST(Sparse_matrix, can_multiply_SELL_C_time) {
     b = mat.SpMV(b);
     auto end = std::chrono::high_resolution_clock::now();
 
-    // ���������� �����������������
     std::chrono::duration<double> elapsed = end - start;
 
-    // ����� ������� ����������
     ASSERT_NO_THROW(printf("The time of SELL_c: %f seconds\n", elapsed.count()););
 }
 
@@ -309,13 +303,13 @@ TEST(Sparse_matrix, right_mult_coo_SELL_C) {
 }
 
 TEST(Sparse_matrix, right_mult_coo_SELL_C_sigma) {
-    const std::string path(TEST_MATRIX);
+    const std::string path("../../bin_matrix/494_bus.bin");
     COO_matrix mat(path);
     int size = mat.get_cols();
     std::vector<double> b(size, 1);
     double startTime, endTime;
     b = mat.SpMV(b);
-    std::string path2(TEST_MATRIX);
+    std::string path2("../../bin_matrix/494_bus.bin");
     SELL_C_sigma_matrix mat2(path2, 2,4);
     int size2 = mat2.get_cols();
     std::vector<double> b2(size2, 1);
