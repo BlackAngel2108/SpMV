@@ -465,7 +465,7 @@ std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
 
             // создание вектора аккумулятора
             vfloat64m1_t vec_sum = __riscv_vfmv_v_f_f64m1(0.0, vlmax);
-                    // вектор с нулями
+            // вектор с нулями
             vfloat64m1_t v_zero = __riscv_vfmv_v_f_f64m1(0.0, vlmax);
             double scalar_sum = 0.0;
             int i=0;
