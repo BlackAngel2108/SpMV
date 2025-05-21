@@ -172,7 +172,7 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
   //omp_set_num_threads(4);
 #ifdef omp 
-#pragma omp parallel for schedule(dynamic,1000)
+#pragma omp parallel for schedule(dynamic)
 #endif
     for (int row = 0; row < rows; ++row) {
     double local_sum =0;
@@ -785,7 +785,7 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
             __riscv_vse64_v_f64m1(&scalar_sum, v_reduce_sum, vlmax);
             // Use mapping from sorted_row back to original row index
             int original_row = sorted_to_row_index[row];
-            result[original_row] = temp_for_row;
+            result[original_row] = scalar_sum;
             // // Переводим значение [0] вектора суммы в скалярную величину
             // double scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
             // result[row] = scalar_sum;
@@ -833,7 +833,7 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
             __riscv_vse64_v_f64m1(&scalar_sum, v_reduce_sum, vlmax);
             // Use mapping from sorted_row back to original row index
             int original_row = sorted_to_row_index[row];
-            result[original_row] = temp_for_row;
+            result[original_row] = scalar_sum;
             // // Переводим значение [0] вектора суммы в скалярную величину
             // double scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
             // result[row] = scalar_sum;
@@ -881,7 +881,7 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
             __riscv_vse64_v_f64m1(&scalar_sum, v_reduce_sum, vlmax);
             // Use mapping from sorted_row back to original row index
             int original_row = sorted_to_row_index[row];
-            result[original_row] = temp_for_row;
+            result[original_row] = scalar_sum;
             // // Переводим значение [0] вектора суммы в скалярную величину
             // double scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
             // result[row] = scalar_sum;
@@ -929,7 +929,7 @@ std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
             __riscv_vse64_v_f64m1(&scalar_sum, v_reduce_sum, vlmax);
             // Use mapping from sorted_row back to original row index
             int original_row = sorted_to_row_index[row];
-            result[original_row] = temp_for_row;
+            result[original_row] = scalar_sum;
             // // Переводим значение [0] вектора суммы в скалярную величину
             // double scalar_sum = __riscv_vfmv_f_s_f64m1_f64(vec_sum);
             // result[row] = scalar_sum;

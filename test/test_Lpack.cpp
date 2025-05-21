@@ -150,7 +150,7 @@ TEST(TIME, test_kmer_V2a) {
     test_all(path);
     ASSERT_NO_THROW(std::cout << path << "\n";);
 }*/
-TEST(TIME, test_nlpkkt240) {
+TEST(TIME, ellpack_test_small) {
     std::string path("../../bin_matrix/ellpack_test_small.bin");
     test_all(path);
     ASSERT_NO_THROW(std::cout << path << "\n";);
