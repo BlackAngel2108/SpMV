@@ -148,13 +148,21 @@ int main(int argc, char* argv[]) {
             std::cout << "    COO_matrix: " << filename << std::endl;
             double t1 = SPMV_time(ans, coo_matrix, b);
 
+            
             std::cout << "    CSR_matrix: " << filename << std::endl;
             CSR_matrix csr_matrix(filename);
             double t2 = SPMV_time(ans, csr_matrix, b);
 
-            std::cout << "    DIAG_matrix: " << filename << std::endl;
-            DIAG_matrix diag_matrix(filename);
-            double t3 = SPMV_time(ans, diag_matrix, b);
+            double t3 = 0;
+            try {
+                std::cout << "   DIAG_matrix: " << filename << std::endl;
+                DIAG_matrix diag_matrix(filename);
+                t3 = SPMV_time(ans, diag_matrix, b);
+            }
+            catch (...) {
+                t3 = 0;
+                std::cout << "DIag_error ERROR: " << std::endl;
+            }
 
             double t4 = 0;
             try {
