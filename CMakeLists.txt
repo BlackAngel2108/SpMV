@@ -7,13 +7,13 @@ project(${PROJECT_NAME})
 #set(CMAKE_CXX_COMPILER "C:/msys64/mingw64/bin/g++")
 
 # Добавляем флаг -mavx
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512dq")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512dq")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512vl")
+
+
+
 
 if(COMPILER_SUPPORTS_CXX17)
     message( STATUS "CXX17_supported")

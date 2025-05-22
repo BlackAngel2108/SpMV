@@ -8,9 +8,12 @@
 #include <map>
 #include <algorithm>
 #include <omp.h>
+//#include <oneapi/mkl.hpp>
+#include <mkl.h>
+#include <mkl_spblas.h>
 
-//#define avx512
-#define risc
+#define avx512
+//#define risc
 //#define simple
 #define omp
 //#define avx2
