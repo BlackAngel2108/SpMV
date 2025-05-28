@@ -145,6 +145,7 @@ TEST(TIME, test_road_usa) {
     ASSERT_NO_THROW(std::cout << path << "\n";);
 }
 
+
 TEST(TIME, ellpack_test_small) {
     std::string path("../../bin_matrix/ellpack_test_small.bin");
     test_all(path);
