@@ -174,6 +174,7 @@ std::vector<double> DIAG_matrix::SpMV(const std::vector<double>& vec) {
     return result;
 }
 
+
 ELLPack_matrix::ELLPack_matrix(std::string filename) {
     COO_matrix cooMatrix(filename);
     rows = cooMatrix.get_rows();
@@ -190,10 +191,18 @@ ELLPack_matrix::ELLPack_matrix(std::string filename) {
     for (size_t i = 0; i < size; ++i) {
         row_counts[coo_rows[i]]++;
     }
+
     max_non_zero = *std::max_element(row_counts.begin(), row_counts.end());
 
-    values.resize(rows, std::vector<double>(max_non_zero, 0.0));
-    col_indices.resize(rows, std::vector<int>(max_non_zero,0.0));
+    // Resize the single-dimensional arrays
+    values.resize(rows * max_non_zero, 0.0);
+    col_indices.resize(rows * max_non_zero, 0);
+
+    // Initialize row_starts
+    row_starts.resize(rows + 1, 0);
+    for (int i = 0; i < rows; ++i) {
+        row_starts[i + 1] = row_starts[i] + row_counts[i];
+    }
 
     std::vector<int> current_index(rows, 0);
     for (size_t i = 0; i < size; ++i) {
@@ -201,11 +210,13 @@ ELLPack_matrix::ELLPack_matrix(std::string filename) {
         int col = coo_cols[i];
         double value = coo_values[i];
 
-        values[row][current_index[row]] = value;
-        col_indices[row][current_index[row]] = col;
+        int index = row_starts[row] + current_index[row];
+        values[index] = value;
+        col_indices[index] = col;
         current_index[row]++;
     }
 }
+
 
 std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
 #ifdef simple
@@ -214,17 +225,13 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
 #ifdef omp 
 #pragma omp parallel for schedule(dynamic, 1000)
 #endif
-    for (int row = 0; row < rows; ++row) {
-    double local_sum =0;
-    int idx;
-    for (int i = 0; i < max_non_zero; ++i){
-        idx = col_indices[row][i];
-        local_sum += values[row][i] * x[idx];
-    }
-    result[row]+= local_sum;
+    for (int i = 0; i < rows; ++i) {
+        for (int j = row_starts[i]; j < row_starts[i + 1]; ++j) {
+            result[i] += values[j] * x[col_indices[j]];
+        }
     }
     return result;
-    }
+}
 #endif
 
 #ifdef avx2
@@ -265,24 +272,62 @@ for (int row = 0; row < rows; ++row) {
     result[row] = temp;
 }
 return result;
+}
 #endif
 
+// #ifdef avx512
+// std::vector<double> result(rows, 0.0);
+// #ifdef omp
+// #pragma omp parallel for schedule (dynamic, 1000)
+// #endif
+// for (int row = 0; row < rows; ++row) {
+//         __m512d local_sum = _mm512_setzero_pd();  // Инициализируем аккумулятор нулями
+
+//         // Обрабатываем по 8 элементов за раз (AVX-512 работает с 512-битными регистрами, 8 double)
+//         int k = max_non_zero;
+//         int i = 0;
+//         for (; i+8<=max_non_zero ; k -= 8, i += 8) {
+//             // Загружаем 8 индексов столбцов
+//             __m256i idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&col_indices[row][i]));
+//             // Загружаем 8 значений из матрицы
+//             __m512d vals = _mm512_loadu_pd(&values[row][i]);
+
+//             __m512d x_vals = _mm512_i32gather_pd(idx, x.data(), 8);
+
+//             // Умножаем и добавляем к аккумулятору
+//             local_sum = _mm512_fmadd_pd(vals, x_vals, local_sum);
+//         }
+//         // Суммируем аккумулятор и записываем результат
+//         double temp = _mm512_reduce_add_pd(local_sum);
+//         result[row] += temp;
+        
+//         // Обрабатываем оставшиеся элементы скалярно
+//         for (; i < max_non_zero; ++i) {
+//             result[row] += values[row][i] * x[col_indices[row][i]];
+//         }
+//     }
+// return result;
+// }
+// #endif
+
+
 #ifdef avx512
-std::vector<double> result(rows, 0.0);
+    std::vector<double> result(rows, 0.0);
+
 #ifdef omp
-#pragma omp parallel for schedule (dynamic, 1000)
+#pragma omp parallel for schedule(dynamic, 1000)
 #endif
-for (int row = 0; row < rows; ++row) {
+    for (int row = 0; row < rows; ++row) {
         __m512d local_sum = _mm512_setzero_pd();  // Инициализируем аккумулятор нулями
 
         // Обрабатываем по 8 элементов за раз (AVX-512 работает с 512-битными регистрами, 8 double)
-        int k = max_non_zero;
-        int i = 0;
-        for (; i+8<=max_non_zero ; k -= 8, i += 8) {
+        int k = row_starts[row + 1] - row_starts[row];
+        int i = row_starts[row];
+        for (; i + 8 <= row_starts[row + 1]; k -= 8, i += 8) {
             // Загружаем 8 индексов столбцов
-            __m256i idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&col_indices[row][i]));
+            __m256i idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&col_indices[i]));
             // Загружаем 8 значений из матрицы
-            __m512d vals = _mm512_loadu_pd(&values[row][i]);
+            __m512d vals = _mm512_loadu_pd(&values[i]);
 
             __m512d x_vals = _mm512_i32gather_pd(idx, x.data(), 8);
 
@@ -292,52 +337,91 @@ for (int row = 0; row < rows; ++row) {
         // Суммируем аккумулятор и записываем результат
         double temp = _mm512_reduce_add_pd(local_sum);
         result[row] += temp;
-        
+
         // Обрабатываем оставшиеся элементы скалярно
-        for (; i < max_non_zero; ++i) {
-            result[row] += values[row][i] * x[col_indices[row][i]];
+        for (; i < row_starts[row + 1]; ++i) {
+            result[row] += values[i] * x[col_indices[i]];
         }
     }
-return result;
+    return result;
 }
 #endif
 
+// #ifdef risc
+//         std::vector<double> result(rows, 0.0);
+// #ifdef omp
+// #pragma omp parallel for schedule(dynamic)
+// #endif
+//         for (int row = 0; row < rows; ++row) {
+//             float64_t scalar_sum = 0.0;
+
+//             size_t vlmax = vsetvlmax_e64m1();// Устанавливаем максимальную длину для double
+
+//             vfloat64m1_t vec_sum =vfmv_v_f_f64m1(0.0, vlmax);// Векторный аккумулятор
+
+//             int i = 0;
+//             int k = max_non_zero;
+//             size_t vl=0;
+//             for (vl; k>0; k-=vl, i += vl) {
+//                 vl = vsetvl_e64m1(k);
+                
+//                 vuint32mf2_t vec_indices = vle32_v_u32mf2(&col_indices[row][i], vl);
+//                 vec_indices = vsll_vx_u32mf2(vec_indices, 3 , vl);
+                                                    
+//                 vfloat64m1_t x_vals = vluxei32_v_f64m1(&x[0], vec_indices, vl);
+
+//                 vfloat64m1_t mat_vals = vle_v_f64m1(&values[row][i], vl);
+
+//                 // Умножение и сложение (FMA)
+//                 vec_sum = vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
+//             }
+//             vfloat64m1_t v_reduce_sum = vfredosum_vs_f64m1_f64m1(vec_sum,0.0,vlmax);
+// 	        vse64_v_f64m1(&scalar_sum,v_reduce_sum,vlmax);
+//             result[row] = scalar_sum;;
+//         }
+
+//         return result;
+// }
+// #endif
 #ifdef risc
-        std::vector<double> result(rows, 0.0);
+std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
+    std::vector<double> result(rows, 0.0);
+
 #ifdef omp
 #pragma omp parallel for schedule(dynamic)
 #endif
-        for (int row = 0; row < rows; ++row) {
-            float64_t scalar_sum = 0.0;
+    for (int row = 0; row < rows; ++row) {
+        float64_t scalar_sum = 0.0;
 
-            size_t vlmax = vsetvlmax_e64m1();// Устанавливаем максимальную длину для double
+        size_t vlmax = vsetvlmax_e64m1(); // Устанавливаем максимальную длину для double
 
-            vfloat64m1_t vec_sum =vfmv_v_f_f64m1(0.0, vlmax);// Векторный аккумулятор
+        vfloat64m1_t vec_sum = vfmv_v_f_f64m1(0.0, vlmax); // Векторный аккумулятор
 
-            int i = 0;
-            int k = max_non_zero;
-            size_t vl=0;
-            for (vl; k>0; k-=vl, i += vl) {
-                vl = vsetvl_e64m1(k);
-                
-                vuint32mf2_t vec_indices = vle32_v_u32mf2(&col_indices[row][i], vl);
-                vec_indices = vsll_vx_u32mf2(vec_indices, 3 , vl);
-                                                    
-                vfloat64m1_t x_vals = vluxei32_v_f64m1(&x[0], vec_indices, vl);
+        int i = row_starts[row];
+        int k = row_starts[row + 1] - row_starts[row];
+        size_t vl = 0;
+        for (vl; k > 0; k -= vl, i += vl) {
+            vl = vsetvl_e64m1(k);
 
-                vfloat64m1_t mat_vals = vle_v_f64m1(&values[row][i], vl);
+            vuint32mf2_t vec_indices = vle32_v_u32mf2(&col_indices[i], vl);
+            vec_indices = vsll_vx_u32mf2(vec_indices, 3, vl);
 
-                // Умножение и сложение (FMA)
-                vec_sum = vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
-            }
-            vfloat64m1_t v_reduce_sum = vfredosum_vs_f64m1_f64m1(vec_sum,0.0,vlmax);
-	        vse64_v_f64m1(&scalar_sum,v_reduce_sum,vlmax);
-            result[row] = scalar_sum;;
+            vfloat64m1_t x_vals = vluxei32_v_f64m1(&x[0], vec_indices, vl);
+
+            vfloat64m1_t mat_vals = vle_v_f64m1(&values[i], vl);
+
+            // Умножение и сложение (FMA)
+            vec_sum = vfmacc_vv_f64m1(vec_sum, mat_vals, x_vals, vl);
         }
+        vfloat64m1_t v_reduce_sum = vfredosum_vs_f64m1_f64m1(vec_sum, 0.0, vlmax);
+        vse64_v_f64m1(&scalar_sum, v_reduce_sum, vlmax);
+        result[row] = scalar_sum;
+    }
 
-        return result;
+    return result;
 }
 #endif
+
 
 SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_size(segment_size) {
     COO_matrix cooMatrix(filename);
@@ -349,16 +433,36 @@ SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_s
     std::vector<int> coo_rows = cooMatrix.get_rows_id();
     std::vector<int> coo_cols = cooMatrix.get_cols_id();
 
-    // Count the number of non-zero elements in each row
+    // Подсчет количества ненулевых элементов в каждой строке
     std::vector<int> row_counts(rows, 0);
     for (size_t i = 0; i < size; ++i) {
         row_counts[coo_rows[i]]++;
     }
-    max_non_zero = *std::max_element(row_counts.begin(), row_counts.end());
 
     int num_segments = (rows + segment_size - 1) / segment_size;
-    values.resize(num_segments, std::vector<double>(max_non_zero * segment_size, 0.0));
-    col_indices.resize(num_segments, std::vector<int>(max_non_zero * segment_size,0));
+    std::vector<int> segment_non_zero_counts(num_segments, 0);
+
+    // Подсчет количества ненулевых элементов в каждом сегменте
+    for (int row = 0; row < rows; ++row) {
+        int segment = row / segment_size;
+        if (row_counts[row] > segment_non_zero_counts[segment]) {
+            segment_non_zero_counts[segment] = row_counts[row];
+        }
+    }
+
+    // Инициализация segment_starts
+    segment_starts.resize(num_segments + 1, 0);
+    for (int i = 1; i <= num_segments; ++i) {
+        segment_starts[i] = segment_starts[i - 1] + segment_size * segment_non_zero_counts[i - 1];
+    }
+
+    // Изменение размера одномерных массивов
+    int total_non_zero = 0;
+    for (int segment_non_zero : segment_non_zero_counts) {
+        total_non_zero += segment_non_zero * segment_size;
+    }
+    values.resize(total_non_zero, 0.0);
+    col_indices.resize(total_non_zero, 0);
 
     std::vector<int> current_index(rows, 0);
     for (size_t i = 0; i < size; ++i) {
@@ -369,14 +473,10 @@ SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_s
         int segment = row / segment_size;
         int offset = row % segment_size;
 
-        values[segment][offset * max_non_zero + current_index[row]] = value;
-        col_indices[segment][offset * max_non_zero + current_index[row]] = col;
+        int index = segment_starts[segment] + offset * segment_non_zero_counts[segment] + current_index[row];
+        values[index] = value;
+        col_indices[index] = col;
         current_index[row]++;
-    }
-
-    row_pointers.resize(num_segments + 1, 0);
-    for (int i = 1; i <= num_segments; ++i) {
-        row_pointers[i] = row_pointers[i - 1] + segment_size * max_non_zero;
     }
 }
 
@@ -384,27 +484,27 @@ SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_s
 std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
     int num_segments = values.size();
-#ifdef simple 
+#ifdef simple1
 #ifdef omp
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic, 1000)
 #endif
-    for (int segment = 0; segment < num_segments; segment++) {
-        int segment_max_non_zero = values[segment].size() / segment_size;
+for (int segment = 0; segment < (rows + segment_size - 1) / segment_size; ++segment) {
+    int segment_max_non_zero = (segment_starts[segment + 1] - segment_starts[segment]) / segment_size;
 
-        for (int offset = 0; offset < segment_size; offset++) {
-            int row = segment * segment_size + offset;
-            double temp_for_row = 0;
-            if (row >= rows) break;
+    for (int offset = 0; offset < segment_size; ++offset) {
+        int row = segment * segment_size + offset;
+        double temp_for_row = 0;
+        if (row >= rows) break;
 
-            for (int i = 0; i < segment_max_non_zero; i++) {
-                int index = offset * segment_max_non_zero + i;
-                int temp_col = col_indices[segment][index];
-                temp_for_row += values[segment][index] * x[col_indices[segment][index]];
-            }
-            result[row] = temp_for_row;
+        for (int i = 0; i < segment_max_non_zero; ++i) {
+            int index = segment_starts[segment] + offset * segment_max_non_zero + i;
+            int temp_col = col_indices[index];
+            temp_for_row += values[index] * x[temp_col];
         }
+        result[row] = temp_for_row;
     }
-    return result;
+}
+return result;
 }
 #endif
 #ifdef avx2
@@ -453,41 +553,150 @@ for (int segment = 0; segment < num_segments; segment++) {
     }
 }
 return result;
+}
 #endif
+
+#ifdef simple
+#ifdef omp
+#pragma omp parallel for schedule(dynamic, 1)
+#endif
+    for (int segment = 0; segment < num_segments; ++segment) {
+        int segment_max_non_zero = (segment_starts[segment + 1] - segment_starts[segment]) / segment_size;
+
+        for (int offset = 0; offset < segment_size; ++offset) {
+            int row = segment * segment_size + offset;
+            if (row >= rows) break;
+
+            __m256d local_sum_low = _mm256_setzero_pd();
+            __m256d local_sum_high = _mm256_setzero_pd();
+            int i = 0;
+
+            for (; i + 7 < segment_max_non_zero; i += 8) {
+                int base_index = segment_starts[segment] + offset * segment_max_non_zero + i;
+
+                // Загрузить 8 индексов столбцов
+                __m256i col_idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&col_indices[base_index]));
+
+                // Разделить на 2 части (4 и 4 индекса)
+                __m128i idx_low = _mm256_extracti128_si256(col_idx, 0);
+                __m128i idx_high = _mm256_extracti128_si256(col_idx, 1);
+
+                // Получить 4 и 4 значения из x
+                double x_buf[4];
+                for (int j = 0; j < 4; ++j) x_buf[j] = x[_mm_extract_epi32(idx_low, j)];
+                __m256d x_vals_low = _mm256_loadu_pd(x_buf);
+
+                for (int j = 0; j < 4; ++j) x_buf[j] = x[_mm_extract_epi32(idx_high, j)];
+                __m256d x_vals_high = _mm256_loadu_pd(x_buf);
+
+                // Загрузить значения матрицы
+                __m256d mat_vals_low = _mm256_loadu_pd(&values[base_index]);
+                __m256d mat_vals_high = _mm256_loadu_pd(&values[base_index + 4]);
+
+                // FMA
+                local_sum_low = _mm256_fmadd_pd(mat_vals_low, x_vals_low, local_sum_low);
+                local_sum_high = _mm256_fmadd_pd(mat_vals_high, x_vals_high, local_sum_high);
+            }
+
+            // Обработка остатка
+            double tail_sum = 0.0;
+            for (; i < segment_max_non_zero; ++i) {
+                int index = segment_starts[segment] + offset * segment_max_non_zero + i;
+                tail_sum += values[index] * x[col_indices[index]];
+            }
+
+            // Суммирование содержимого векторов
+            double sum = tail_sum;
+
+            double temp[4];
+            _mm256_storeu_pd(temp, local_sum_low);
+            sum += temp[0] + temp[1] + temp[2] + temp[3];
+            _mm256_storeu_pd(temp, local_sum_high);
+            sum += temp[0] + temp[1] + temp[2] + temp[3];
+
+            result[row] = sum;
+        }
+    }
+
+    return result;
+}
+#endif
+
+// #ifdef avx512
+// #ifdef omp
+// #pragma omp parallel for schedule(dynamic, 1000)
+// #endif
+// for (int segment = 0; segment < num_segments; segment++) {
+//     int segment_max_non_zero = values[segment].size() / segment_size;
+
+//     for (int offset = 0; offset < segment_size; offset++) {
+//         int row = segment * segment_size + offset;
+//         if (row >= rows) break;
+
+//         __m512d local_sum = _mm512_setzero_pd(); 
+//         int i = 0;
+
+//         for (; i + 7 < segment_max_non_zero; i += 8) {
+//             __m256i col_idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&col_indices[segment][offset * segment_max_non_zero + i]));
+
+//             __m512d mat_vals = _mm512_loadu_pd(&values[segment][offset * segment_max_non_zero + i]);
+
+//             __m512d x_vals = _mm512_i32gather_pd(col_idx, x.data(), 8);
+
+//             local_sum = _mm512_fmadd_pd(mat_vals, x_vals,local_sum);
+//         }
+
+//         for (; i < segment_max_non_zero; i++) {
+//             int temp_col = col_indices[segment][offset * segment_max_non_zero + i];
+//             result[row] += values[segment][offset * segment_max_non_zero + i] * x[temp_col];
+//         }
+
+//         result[row] += _mm512_reduce_add_pd(local_sum);
+//     }
+// }
+// return result;
+// }
+// #endif
 
 #ifdef avx512
 #ifdef omp
 #pragma omp parallel for schedule(dynamic, 1000)
 #endif
-for (int segment = 0; segment < num_segments; segment++) {
-    int segment_max_non_zero = values[segment].size() / segment_size;
+    for (int segment = 0; segment < num_segments; segment++) {
+        int segment_max_non_zero = (segment_starts[segment + 1] - segment_starts[segment]) / segment_size;
 
-    for (int offset = 0; offset < segment_size; offset++) {
-        int row = segment * segment_size + offset;
-        if (row >= rows) break;
+        for (int offset = 0; offset < segment_size; offset++) {
+            int row = segment * segment_size + offset;
+            if (row >= rows) break;
 
-        __m512d local_sum = _mm512_setzero_pd(); 
-        int i = 0;
+            __m512d local_sum = _mm512_setzero_pd();
+            int i = 0;
 
-        for (; i + 7 < segment_max_non_zero; i += 8) {
-            __m256i col_idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&col_indices[segment][offset * segment_max_non_zero + i]));
+            for (; i + 7 < segment_max_non_zero; i += 8) {
+                int index = segment_starts[segment] + offset * segment_max_non_zero + i;
+                if (index + 7 >= segment_starts[segment + 1]) break; // Проверка выхода за границы
 
-            __m512d mat_vals = _mm512_loadu_pd(&values[segment][offset * segment_max_non_zero + i]);
+                __m256i col_idx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&col_indices[index]));
 
-            __m512d x_vals = _mm512_i32gather_pd(col_idx, x.data(), 8);
+                __m512d mat_vals = _mm512_loadu_pd(&values[index]);
 
-            local_sum = _mm512_fmadd_pd(mat_vals, x_vals,local_sum);
+                __m512d x_vals = _mm512_i32gather_pd(col_idx, x.data(), 8);
+
+                local_sum = _mm512_fmadd_pd(mat_vals, x_vals, local_sum);
+            }
+
+            for (; i < segment_max_non_zero; i++) {
+                int index = segment_starts[segment] + offset * segment_max_non_zero + i;
+                if (index >= segment_starts[segment + 1]) break; // Проверка выхода за границы
+
+                int temp_col = col_indices[index];
+                result[row] += values[index] * x[temp_col];
+            }
+
+            result[row] += _mm512_reduce_add_pd(local_sum);
         }
-
-        for (; i < segment_max_non_zero; i++) {
-            int temp_col = col_indices[segment][offset * segment_max_non_zero + i];
-            result[row] += values[segment][offset * segment_max_non_zero + i] * x[temp_col];
-        }
-
-        result[row] += _mm512_reduce_add_pd(local_sum);
     }
-}
-return result;
+    return result;
 }
 #endif
 
@@ -531,6 +740,7 @@ return result;
     }
 #endif
 
+
 SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size, int sigma)
     : segment_size(segment_size), sigma(sigma) {
     COO_matrix cooMatrix(filename);
@@ -542,13 +752,13 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
     std::vector<int> coo_rows = cooMatrix.get_rows_id();
     std::vector<int> coo_cols = cooMatrix.get_cols_id();
 
-    // Count the number of non-zero elements in each row
+    // Подсчет количества ненулевых элементов в каждой строке
     std::vector<int> row_counts(rows, 0);
     for (size_t i = 0; i < size; ++i) {
         row_counts[coo_rows[i]]++;
     }
 
-    // Sort rows in blocks of size sigma
+    // Сортировка строк блоками размера sigma
     std::vector<int> row_order(rows);
     for (int i = 0; i < rows; ++i) {
         row_order[i] = i;
@@ -560,7 +770,7 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
             [&row_counts](int a, int b) { return row_counts[a] > row_counts[b]; });
     }
 
-    // Create a mapping from original row index to its new position after sorting
+    // Создание отображения из исходного индекса строки в её новую позицию после сортировки
     std::vector<int> row_to_sorted_index(rows);
     for (int i = 0; i < rows; ++i) {
         row_to_sorted_index[row_order[i]] = i;
@@ -569,27 +779,31 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
     for (int i = 0; i < rows; ++i) {
         sorted_to_row_index[row_to_sorted_index[i]] = i;
     }
+
     int num_segments = (rows + segment_size - 1) / segment_size;
+    std::vector<int> segment_non_zero_counts(num_segments, 0);
 
-    values.resize(num_segments);
-    col_indices.resize(num_segments);
-
-    std::vector<int> segment_max_non_zero(num_segments, 0);
-
-    for (int segment = 0; segment < num_segments; segment++) {
-        int start_row = segment * segment_size;
-        int end_row = std::min(start_row + segment_size, rows);
-
-        // Find the maximum number of non-zero elements in the current segment
-        for (int row = start_row; row < end_row; row++) {
-            if (row_counts[row_order[row]] > segment_max_non_zero[segment]) {
-                segment_max_non_zero[segment] = row_counts[row_order[row]];
-            }
+    // Подсчет количества ненулевых элементов в каждом сегменте
+    for (int row = 0; row < rows; ++row) {
+        int segment = row_to_sorted_index[row] / segment_size;
+        if (row_counts[row] > segment_non_zero_counts[segment]) {
+            segment_non_zero_counts[segment] = row_counts[row];
         }
-
-        values[segment].resize(static_cast<size_t>(segment_size) * static_cast<size_t>(segment_max_non_zero[segment]), 0.0);
-        col_indices[segment].resize(static_cast<size_t>(segment_size) * static_cast<size_t>(segment_max_non_zero[segment]), -1);
     }
+
+    // Инициализация segment_starts
+    segment_starts.resize(num_segments + 1, 0);
+    for (int i = 1; i <= num_segments; ++i) {
+        segment_starts[i] = segment_starts[i - 1] + segment_size * segment_non_zero_counts[i - 1];
+    }
+
+    // Изменение размера одномерных массивов
+    int total_non_zero = 0;
+    for (int segment_non_zero : segment_non_zero_counts) {
+        total_non_zero += segment_non_zero * segment_size;
+    }
+    values.resize(total_non_zero, 0.0);
+    col_indices.resize(total_non_zero, 0);
 
     std::vector<int> current_index(rows, 0);
     for (size_t i = 0; i < size; ++i) {
@@ -597,52 +811,47 @@ SELL_C_sigma_matrix::SELL_C_sigma_matrix(std::string filename, int segment_size,
         int col = coo_cols[i];
         double value = coo_values[i];
 
-        // Use the mapping to find the correct segment and offset
+        // Использование отображения для нахождения правильного сегмента и смещения
         int sorted_index = row_to_sorted_index[row];
         int segment = sorted_index / segment_size;
         int offset = sorted_index % segment_size;
 
-        values[segment][offset * segment_max_non_zero[segment] + current_index[row]] = value;
-        col_indices[segment][offset * segment_max_non_zero[segment] + current_index[row]] = col;
+        int index = segment_starts[segment] + offset * segment_non_zero_counts[segment] + current_index[row];
+        values[index] = value;
+        col_indices[index] = col;
         current_index[row]++;
-    }
-
-    row_pointers.resize(num_segments + 1, 0);
-    for (int i = 1; i <= num_segments; i++) {
-        row_pointers[i] = row_pointers[i - 1] + segment_size * segment_max_non_zero[i - 1];
     }
 }
 
 std::vector<double> SELL_C_sigma_matrix::SpMV(const std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
-    int num_segments = values.size();
+    //int num_segments = values.size();
+    int num_segments = (rows + segment_size - 1) / segment_size;
 #ifdef simple 
 #ifdef omp
-    #pragma omp parallel for schedule(dynamic)
+    #pragma omp parallel for schedule(dynamic, 1000)
 #endif
-    for (int segment = 0; segment < num_segments; segment++) {
-        int segment_max_non_zero = values[segment].size() / segment_size;
+for (int segment = 0; segment < num_segments; segment++) {
+    int segment_max_non_zero = (segment_starts[segment + 1] - segment_starts[segment]) / segment_size;
 
-        for (int offset = 0; offset < segment_size; offset++) {
-            int row = segment * segment_size + offset;
-            double temp_for_row = 0;
-            if (row >= rows) break;
+    for (int offset = 0; offset < segment_size; offset++) {
+        int row = segment * segment_size + offset;
+        double temp_for_row = 0;
+        if (row >= rows) break;
 
-            for (int i = 0; i < segment_max_non_zero; i++) {
-                int index = offset * segment_max_non_zero + i;
-                int temp_col = col_indices[segment][index];
-                if (temp_col == -1) {
-                    continue;
-                }
-                temp_for_row += values[segment][index] * x[col_indices[segment][index]];
-            }
-            // Use mapping from sorted_row back to original row index
-            int original_row = sorted_to_row_index[row];
-            result[original_row] = temp_for_row;
+        for (int i = 0; i < segment_max_non_zero; i++) {
+            int index = segment_starts[segment] + offset * segment_max_non_zero + i;
+            int temp_col = col_indices[index];
+            temp_for_row += values[index] * x[temp_col];
         }
+        // Использование отображения из sorted_row обратно в исходный индекс строки
+        int original_row = sorted_to_row_index[row];
+        result[original_row] = temp_for_row;
     }
-    return result;
 }
+return result;
+}
+
 #endif
 #ifdef avx2
 std::vector<double> result(rows, 0.0);

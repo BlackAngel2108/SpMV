@@ -12,9 +12,9 @@
 #include <mkl.h>
 #include <mkl_spblas.h>
 
-#define avx512
+//#define avx512
 //#define risc
-//#define simple
+#define simple
 #define omp
 //#define avx2
 //#define simple
@@ -70,41 +70,46 @@ public:
     std::vector<double> SpMV(const std::vector<double>& vec) override;
 };
 
-class ELLPack_matrix : public Sparse_matrix {
-private:
-    std::vector<std::vector<double>> values;      // Array of non-zero element values
-    std::vector<std::vector<int>> col_indices;    // Array of column indices
-    int max_non_zero;                             // Maximum number of non-zero elements per row
 
-public:
-    ELLPack_matrix(std::string filename);
-    std::vector<double> SpMV(const std::vector<double>& x) override;
+class ELLPack_matrix : public Sparse_matrix {
+    private:
+        std::vector<double> values;      // Single-dimensional array of non-zero element values
+        std::vector<int> col_indices;    // Single-dimensional array of column indices
+        std::vector<int> row_starts;     // Array to keep track of the start of each row
+        int max_non_zero;                // Maximum number of non-zero elements per row
+    
+    public:
+        ELLPack_matrix(std::string filename);
+        std::vector<double> SpMV(const std::vector<double>& x) override;
 };
+
+
 
 class SELL_C_matrix : public Sparse_matrix {
-private:
-    std::vector<std::vector<double>> values;      // Array of non-zero element values
-    std::vector<std::vector<int>> col_indices;    // Array of column indices
-    std::vector<int> row_pointers;                // Segment start pointers
-    int segment_size;                             // Segment size
-    int max_non_zero;                             // Maximum number of non-zero elements per row
-
-public:
-    SELL_C_matrix(std::string filename, int segment_size);
-    std::vector<double> SpMV(const std::vector<double>& x) override;
+    private:
+        std::vector<double> values;      // Одномерный массив значений ненулевых элементов
+        std::vector<int> col_indices;    // Одномерный массив индексов столбцов
+        std::vector<int> segment_starts;  // Массив для отслеживания начала каждого сегмента
+        int segment_size;                // Размер сегмента
+        int max_non_zero;               // Максимальное количество ненулевых элементов в строке
+    
+    public:
+        SELL_C_matrix(std::string filename, int segment_size);
+        std::vector<double> SpMV(const std::vector<double>& x) override;
 };
 
-class SELL_C_sigma_matrix : public Sparse_matrix {
-private:
-    std::vector<std::vector<double>> values;      // Array of non-zero element values
-    std::vector<std::vector<int>> col_indices;    // Array of column indices
-    std::vector<int> row_pointers;                // Row start pointers
-    std::vector<int> sorted_to_row_index;
-    int segment_size;                             // Segment size
-    int max_non_zero;                             // Maximum number of non-zero elements per row
-    int sigma;                                    // Number of non-zero elements per row in a segment
 
-public:
-    SELL_C_sigma_matrix(std::string filename, int segment_size, int sigma);
-    std::vector<double> SpMV(const std::vector<double>& x) override;
+class SELL_C_sigma_matrix : public Sparse_matrix {
+    private:
+        std::vector<double> values;      // Одномерный массив значений ненулевых элементов
+        std::vector<int> col_indices;    // Одномерный массив индексов столбцов
+        std::vector<int> segment_starts;  // Массив для отслеживания начала каждого сегмента
+        std::vector<int> sorted_to_row_index;
+        int segment_size;                // Размер сегмента
+        int max_non_zero;               // Максимальное количество ненулевых элементов в строке
+        int sigma;                      // Количество ненулевых элементов в строке в сегменте
+    
+    public:
+        SELL_C_sigma_matrix(std::string filename, int segment_size, int sigma);
+        std::vector<double> SpMV(const std::vector<double>& x) override;
 };

@@ -157,94 +157,94 @@ TEST(TIME, test_kmer_V2a) {
 //     ASSERT_NO_THROW(std::cout << path << "\n";);
 // }
 
-double time_MKL_COO(const std::string& filename) {
-    std::cout << "[INFO] Загружаем матрицу из файла: " << filename << std::endl;
+// double time_MKL_COO(const std::string& filename) {
+//     std::cout << "[INFO] Загружаем матрицу из файла: " << filename << std::endl;
 
-    COO_matrix coo(filename);
+//     COO_matrix coo(filename);
 
-    int rows = coo.get_rows();
-    int cols = coo.get_cols();
-    int nnz = coo.get_size();
+//     int rows = coo.get_rows();
+//     int cols = coo.get_cols();
+//     int nnz = coo.get_size();
 
-    std::cout << "[DEBUG] Размеры матрицы: rows = " << rows << ", cols = " << cols << ", nnz = " << nnz << std::endl;
+//     std::cout << "[DEBUG] Размеры матрицы: rows = " << rows << ", cols = " << cols << ", nnz = " << nnz << std::endl;
 
-    // Проверка валидности
-    if (rows <= 0 || cols <= 0 || nnz <= 0) {
-        std::cerr << "[ERROR] Некорректные размеры матрицы." << std::endl;
-        return -1.0;
-    }
+//     // Проверка валидности
+//     if (rows <= 0 || cols <= 0 || nnz <= 0) {
+//         std::cerr << "[ERROR] Некорректные размеры матрицы." << std::endl;
+//         return -1.0;
+//     }
 
-    std::vector<int> rows_int = coo.get_rows_id();
-    std::vector<int> cols_int = coo.get_cols_id();
-    std::vector<double> vals = coo.get_values();
+//     std::vector<int> rows_int = coo.get_rows_id();
+//     std::vector<int> cols_int = coo.get_cols_id();
+//     std::vector<double> vals = coo.get_values();
 
-    if (rows_int.size() != nnz || cols_int.size() != nnz || vals.size() != nnz) {
-        std::cerr << "[ERROR] Размерность массивов не совпадает с nnz." << std::endl;
-        return -1.0;
-    }
+//     if (rows_int.size() != nnz || cols_int.size() != nnz || vals.size() != nnz) {
+//         std::cerr << "[ERROR] Размерность массивов не совпадает с nnz." << std::endl;
+//         return -1.0;
+//     }
 
-    std::cout << "[INFO] Преобразуем int → MKL_INT..." << std::endl;
-    std::vector<MKL_INT> rowInd(nnz);
-    std::vector<MKL_INT> colInd(nnz);
+//     std::cout << "[INFO] Преобразуем int → MKL_INT..." << std::endl;
+//     std::vector<MKL_INT> rowInd(nnz);
+//     std::vector<MKL_INT> colInd(nnz);
 
-    for (int i = 0; i < nnz; ++i) {
-        rowInd[i] = static_cast<MKL_INT>(rows_int[i]);
-        colInd[i] = static_cast<MKL_INT>(cols_int[i]);
-    }
+//     for (int i = 0; i < nnz; ++i) {
+//         rowInd[i] = static_cast<MKL_INT>(rows_int[i]);
+//         colInd[i] = static_cast<MKL_INT>(cols_int[i]);
+//     }
 
-    std::vector<double> x(cols, 1.0);
-    std::vector<double> y(rows, 0.0);
+//     std::vector<double> x(cols, 1.0);
+//     std::vector<double> y(cols, 0.0);
 
-    sparse_matrix_t A;
-    matrix_descr descr;
-    descr.type = SPARSE_MATRIX_TYPE_GENERAL;
-    descr.mode = SPARSE_FILL_MODE_FULL;
-    descr.diag = SPARSE_DIAG_NON_UNIT;
+//     sparse_matrix_t A;
+//     matrix_descr descr;
+//     descr.type = SPARSE_MATRIX_TYPE_GENERAL;
+//     descr.mode = SPARSE_FILL_MODE_FULL;
+//     descr.diag = SPARSE_DIAG_NON_UNIT;
 
-    std::cout << "[INFO] Создаём MKL COO матрицу..." << std::endl;
-    sparse_status_t status;
-    for (int i = 0; i < nnz; ++i) {
-        if (rowInd[i] >= rows || colInd[i] >= cols || rowInd[i] < 0 || colInd[i] < 0) {
-            std::cerr << "[ERROR] Неверные индексы в COO: i = " << i
-                      << ", row = " << rowInd[i]
-                      << ", col = " << colInd[i]
-                      << ", rows = " << rows
-                      << ", cols = " << cols << std::endl;
-            return -1.0;
-        }
-    }
-    status = mkl_sparse_d_create_coo(&A, SPARSE_INDEX_BASE_ZERO, rows, cols, nnz,
-                                      rowInd.data(), colInd.data(), vals.data());
+//     std::cout << "[INFO] Создаём MKL COO матрицу..." << std::endl;
+//     sparse_status_t status;
+//     for (int i = 0; i < nnz; ++i) {
+//         if (rowInd[i] >= rows || colInd[i] >= cols || rowInd[i] < 0 || colInd[i] < 0) {
+//             std::cerr << "[ERROR] Неверные индексы в COO: i = " << i
+//                       << ", row = " << rowInd[i]
+//                       << ", col = " << colInd[i]
+//                       << ", rows = " << rows
+//                       << ", cols = " << cols << std::endl;
+//             return -1.0;
+//         }
+//     }
+//     status = mkl_sparse_d_create_coo(&A,  SPARSE_INDEX_BASE_ZERO, rows, cols, nnz,
+//                                       rowInd.data(), colInd.data(), vals.data());
 
-    if (status != SPARSE_STATUS_SUCCESS) {
-        std::cerr << "[ERROR] Ошибка при создании COO матрицы: код " << status << std::endl;
-        return -1.0;
-    }
+//     if (status != SPARSE_STATUS_SUCCESS) {
+//         std::cerr << "[ERROR] Ошибка при создании COO матрицы: код " << status << std::endl;
+//         return -1.0;
+//     }
 
-    std::cout << "[INFO] Выполняем умножение матрицы на вектор..." << std::endl;
-    auto start = std::chrono::high_resolution_clock::now();
+//     std::cout << "[INFO] Выполняем умножение матрицы на вектор..." << std::endl;
+//     auto start = std::chrono::high_resolution_clock::now();
 
-    status = mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE, 1.0, A, descr, x.data(), 0.0, y.data());
+//     status = mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE, 1.0, A, descr, x.data(), 0.0, y.data());
 
-    auto end = std::chrono::high_resolution_clock::now();
+//     auto end = std::chrono::high_resolution_clock::now();
 
-    if (status != SPARSE_STATUS_SUCCESS) {
-        std::cerr << "[ERROR] Ошибка при выполнении умножения: код " << status << std::endl;
-        mkl_sparse_destroy(A);
-        return -1.0;
-    }
+//     if (status != SPARSE_STATUS_SUCCESS) {
+//         std::cerr << "[ERROR] Ошибка при выполнении умножения: код " << status << std::endl;
+//         mkl_sparse_destroy(A);
+//         return -1.0;
+//     }
 
-    std::cout << "[INFO] Успешное умножение. Освобождаем ресурсы..." << std::endl;
-    mkl_sparse_destroy(A);
+//     std::cout << "[INFO] Успешное умножение. Освобождаем ресурсы..." << std::endl;
+//     mkl_sparse_destroy(A);
 
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "[INFO] Время выполнения: " << elapsed.count() << " секунд." << std::endl;
+//     std::chrono::duration<double> elapsed = end - start;
+//     std::cout << "[INFO] Время выполнения: " << elapsed.count() << " секунд." << std::endl;
 
-    return elapsed.count();
-}
+//     return elapsed.count();
+// }
 
 
-// TEST(TIME, test_mkl_nlpkkt240) {
+// TEST(TIME, test_mkl_test) {
 //     std::string path("../../bin_matrix/test.bin");
 //     double t = time_MKL_COO(path);
 //     printf("The time MKL_COO: %f seconds\n", t);
