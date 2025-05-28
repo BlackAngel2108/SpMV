@@ -177,24 +177,19 @@ ELLPack_matrix::ELLPack_matrix(std::string filename) {
 }
 
 std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
-#ifdef simple
+    #ifdef simple
     std::vector<double> result(rows, 0.0);
-  //omp_set_num_threads(4);
-#ifdef omp 
-#pragma omp parallel for schedule(dynamic,1000)
-#endif
-    for (int row = 0; row < rows; ++row) {
-    double local_sum =0;
-    int idx;
-    for (int i = 0; i < max_non_zero; ++i){
-        idx = col_indices[row][i];
-        local_sum += values[row][i] * x[idx];
-    }
-    result[row]+= local_sum;
+    //omp_set_num_threads(4);
+    #ifdef omp 
+    #pragma omp parallel for schedule(dynamic, 1000)
+    #endif
+    for (int i = 0; i < rows; ++i) {
+        for (int j = row_starts[i]; j < row_starts[i + 1]; ++j) {
+            result[i] += values[j] * x[col_indices[j]];
+        }
     }
     return result;
 }
-#endif
 #ifdef risc
 std::vector<double> result(rows, 0.0);
 size_t vlmax = __riscv_vsetvlmax_e64m1();  // Максимальное количество double
