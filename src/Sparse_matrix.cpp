@@ -83,7 +83,7 @@ CSR_matrix::CSR_matrix(std::string filename) {
 
 std::vector<double> CSR_matrix::SpMV(const std::vector<double>& vec) {
     std::vector<double> result(rows, 0.0);
-#if defined  (simple) || defined(risc) || defined(avx512)
+#if defined  (simple) || defined(risc) || defined(avx512) || defined(avx2)
     #ifdef omp
     #pragma omp parallel for 
     #endif
@@ -99,7 +99,7 @@ std::vector<double> CSR_matrix::SpMV(const std::vector<double>& vec) {
 }
 #endif
 
-#if defined (avx512_test) || defined(avx2)
+#if defined (avx512_test) || defined(avx2_test)
     #ifdef omp
     #pragma omp parallel for schedule (dynamic)
     #endif
