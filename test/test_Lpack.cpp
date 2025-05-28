@@ -138,19 +138,14 @@ TEST(TIME, test_rajat31) {
 	std::cout<<"Ellpack erro"<<std::endl;
     }
     ASSERT_NO_THROW(std::cout << path << "\n";);
-}
+}*/
 TEST(TIME, test_road_usa) {
-    std::string path("../../bin_matrix/road_usa.bin");
+    std::string path("../../bin_matrix/494_bus.bin");
     test_all(path);
     ASSERT_NO_THROW(std::cout << path << "\n";);
 }
 
-TEST(TIME, test_kmer_V2a) {
-    std::string path("../../bin_matrix/kmer_V2a.bin");
-    test_all(path);
-    ASSERT_NO_THROW(std::cout << path << "\n";);
-}*/
-TEST(TIME, test_nlpkkt240) {
+TEST(TIME, ellpack_test_small) {
     std::string path("../../bin_matrix/ellpack_test_small.bin");
     test_all(path);
     ASSERT_NO_THROW(std::cout << path << "\n";);

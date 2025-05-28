@@ -303,13 +303,13 @@ TEST(Sparse_matrix, right_mult_coo_SELL_C) {
 }
 
 TEST(Sparse_matrix, right_mult_coo_SELL_C_sigma) {
-    const std::string path("../../bin_matrix/494_bus.bin");
+    const std::string path(TEST_MATRIX);
     COO_matrix mat(path);
     int size = mat.get_cols();
     std::vector<double> b(size, 1);
     double startTime, endTime;
     b = mat.SpMV(b);
-    std::string path2("../../bin_matrix/494_bus.bin");
+    std::string path2(TEST_MATRIX);
     SELL_C_sigma_matrix mat2(path2, 2,4);
     int size2 = mat2.get_cols();
     std::vector<double> b2(size2, 1);
