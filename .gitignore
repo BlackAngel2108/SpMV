@@ -5,6 +5,7 @@
 
 build
 build_risc
+build-risc
 build2
 matrix
 bin_matrix
