@@ -190,6 +190,8 @@ std::vector<double> ELLPack_matrix::SpMV(const std::vector<double>& x) {
     }
     return result;
 }
+#endif
+
 #ifdef risc
 std::vector<double> result(rows, 0.0);
 size_t vlmax = __riscv_vsetvlmax_e64m1();  // Максимальное количество double
@@ -433,7 +435,8 @@ SELL_C_matrix::SELL_C_matrix(std::string filename, int segment_size) : segment_s
 
 std::vector<double> SELL_C_matrix::SpMV(const std::vector<double>& x) {
     std::vector<double> result(rows, 0.0);
-    int num_segments = values.size();
+    //int num_segments = values.size();
+    int num_segments = (rows + segment_size - 1) / segment_size;
 #ifdef simple
 #ifdef omp
 #pragma omp parallel for schedule(dynamic, 1000)
